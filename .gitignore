@@ -3,4 +3,5 @@
 !.gitignore
 !nvim
 !nvim/*
+!alacritty*
 
