@@ -4,4 +4,6 @@
 !nvim
 !nvim/*
 !alacritty*
+!zellij
+!zellij/*
 
