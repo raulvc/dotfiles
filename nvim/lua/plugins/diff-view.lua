@@ -1,3 +1,23 @@
+local function get_default_branch()
+  local result = vim.fn.system "git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null"
+
+  if vim.v.shell_error ~= 0 then
+    return "main" -- fallback to main if command fails
+  end
+
+  result = result:gsub("^refs/remotes/origin/", ""):gsub("%s+$", "")
+
+  if result ~= "master" and result ~= "main" then
+    vim.notify("Default branch detected as: " .. result, vim.log.levels.WARN)
+  end
+
+  if result == "" then
+    return "main" -- fallback to main if empty result
+  end
+
+  return result
+end
+
 return {
   {
     -- NOTE: jump between diffs with ]c and [c (vim built in), see :h jumpto-diffs
@@ -54,7 +74,16 @@ return {
         end,
         desc = "Compare commits",
       },
-      { "<leader>gdq", ":DiffviewClose<CR>", desc = "Close Diffview tab" },
+      {
+        "<leader>gdq",
+        function()
+          pcall(function()
+            vim.cmd "DiffviewClose"
+          end)
+        end,
+        desc = "Close Diffview tab",
+      },
+
       { "<leader>gdh", ":DiffviewFileHistory %<CR>", desc = "File history" },
       { "<leader>gdH", ":DiffviewFileHistory<CR>", desc = "Repo history" },
       { "<leader>gdm", ":DiffviewOpen<CR>", desc = "Solve merge conflicts" },
@@ -63,7 +92,7 @@ return {
       {
         "<leader>gdp",
         function()
-          local default_branch = require("fredrik.utils.git").get_default_branch()
+          local default_branch = get_default_branch()
           vim.cmd(":DiffviewOpen origin/" .. default_branch .. "...HEAD --imply-local")
         end,
         desc = "Review current PR",
@@ -71,7 +100,7 @@ return {
       {
         "<leader>gdP",
         function()
-          local default_branch = require("fredrik.utils.git").get_default_branch()
+          local default_branch = get_default_branch()
           return vim.cmd(
             ":DiffviewFileHistory --range=origin/" .. default_branch .. "...HEAD --right-only --no-merges --reverse"
           )
