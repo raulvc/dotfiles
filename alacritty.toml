@@ -112,7 +112,7 @@ mods = "Control|Shift"
 [scrolling]
 history = 100000
 
-[shell]
+[terminal.shell]
 args = ["--layout", "default", "options", "--default-shell", "bash"]
 program = "/usr/bin/zellij"
 
@@ -124,3 +124,5 @@ startup_mode = "Windowed"
 [window.padding]
 x = 0
 y = 0
+
+[terminal]
