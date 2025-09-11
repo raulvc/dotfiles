@@ -145,7 +145,14 @@ map("v", "<S-Tab>", "<gv", { desc = "Unindent selection" })
 
 map("n", "<leader>co", ":BufferLineCloseOthers<CR>", { desc = "Close other buffers (bufferline)" })
 
-map("v", "<leader>gd", ":'<,'>AdvancedGitSearch diff_commit_line<CR>", { desc = "Git diff commit for selection" })
+map("v", "<leader>gd", function()
+  -- Temporarily redirect error output to /dev/null
+  vim.cmd "redir! > /dev/null"
+  pcall(function()
+    vim.cmd "'<,'>AdvancedGitSearch diff_commit_line"
+  end)
+  vim.cmd "redir END"
+end, { desc = "Git diff commit for selection" })
 
 map("i", "<M-BS>", "<C-o>dB", { noremap = true, silent = true, desc = "enables delete word on insert mode" })
 map({ "n", "v" }, "<C-s>", "<cmd>w!<CR>", { desc = "Save buffer (force)" })
@@ -160,7 +167,7 @@ map("n", "<leader>sl", function()
 
   vim.lsp.buf.code_action {
     filter = function(action)
-      return action.title and action.title:match "Split.*arguments.*separate.*lines"
+      return action.title and action.title:match "Split.*separate.*lines"
     end,
     apply = true,
   }
@@ -192,8 +199,12 @@ map("n", "<leader>ga", function()
   vim.api.nvim_buf_set_mark(0, "<", start_line, 0, {})
   vim.api.nvim_buf_set_mark(0, ">", end_line, 0, {})
 
-  -- Execute the command as if it was called from visual mode
-  vim.cmd "'<,'>AdvancedGitSearch diff_commit_line"
+  -- Temporarily redirect error output to /dev/null
+  vim.cmd "redir! > /dev/null"
+  pcall(function()
+    vim.cmd "'<,'>AdvancedGitSearch diff_commit_line"
+  end)
+  vim.cmd "redir END"
 end, { desc = "Git diff commit for current line (±10 lines)" })
 
 map("n", "<leader>cc", ":CodeCompanionChat Toggle<CR>", { desc = "Toggle CodeCompanion Chat" })

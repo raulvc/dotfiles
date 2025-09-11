@@ -116,9 +116,9 @@ return {
         suggestion = {
           enabled = true,
           auto_trigger = true,
-          debounce = 700,
+          debounce = 500,
           keymap = {
-            accept = "<Tab>",
+            accept = "<C-l>",
             dismiss = "<Esc>",
           },
         },
