@@ -55,6 +55,13 @@ return {
       -- Configure servers using vim.lsp.config (Neovim 0.11+)
       vim.lsp.config("lua_ls", {
         capabilities = capabilities,
+        settings = {
+          Lua = {
+            format = {
+              enable = false, -- Disable LSP formatting, let conform handle it
+            },
+          },
+        },
       })
 
       vim.lsp.config("bashls", {

@@ -183,12 +183,4 @@ return {
       },
     },
   },
-  {
-    "lewis6991/satellite.nvim",
-    lazy = false,
-  },
-  -- {
-  --   "stevearc/overseer.nvim",
-  --   opts = {},
-  -- },
 }
