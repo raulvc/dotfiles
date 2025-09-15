@@ -222,3 +222,182 @@ map({ "n", "i", "v" }, "<M-n>", function()
     vim.cmd "startinsert"
   end)
 end, { desc = "Open new scratch buffer" })
+
+-- === TEXT WRAPPING MAPPINGS ===
+-- Function to wrap selection with specified characters
+local function wrap_selection(left, right)
+  right = right or left -- If no right char provided, use left for both sides
+
+  -- Get visual selection start and end positions
+  local start_pos, end_pos
+
+  -- Check if we're in visual mode
+  local mode = vim.fn.mode()
+  if mode == "v" or mode == "V" or mode == "\22" then -- \22 is visual block mode
+    -- We're in active visual mode, get current selection
+    start_pos = vim.fn.getpos "." -- Current cursor position
+    -- We need to use a different approach for active visual mode
+    vim.cmd "normal! \27" -- Escape to exit visual mode, which sets the marks
+    start_pos = vim.fn.getpos "'<"
+    end_pos = vim.fn.getpos "'>"
+    -- Re-enter visual mode to restore selection
+    vim.cmd "normal! gv"
+  else
+    -- Not in visual mode, use existing marks
+    start_pos = vim.fn.getpos "'<"
+    end_pos = vim.fn.getpos "'>"
+  end
+
+  -- Extract line and column (1-indexed from getpos, need 0-indexed for API)
+  local start_row = start_pos[2] - 1
+  local start_col = start_pos[3] - 1
+  local end_row = end_pos[2] - 1
+  local end_col = end_pos[3]
+
+  -- Ensure coordinates are in correct order
+  if start_row > end_row or (start_row == end_row and start_col > end_col) then
+    start_row, end_row = end_row, start_row
+    start_col, end_col = end_col, start_col
+  end
+
+  -- Get line lengths to validate column positions (with nil check)
+  local start_line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, false)[1]
+  local end_line = vim.api.nvim_buf_get_lines(0, end_row, end_row + 1, false)[1]
+
+  if not start_line or not end_line then
+    return -- Invalid line numbers
+  end
+
+  local start_line_len = #start_line
+  local end_line_len = #end_line
+
+  -- Clamp column positions to valid ranges
+  start_col = math.max(0, math.min(start_col, start_line_len))
+  end_col = math.max(0, math.min(end_col, end_line_len))
+
+  -- For single line selections, ensure start_col <= end_col
+  if start_row == end_row and start_col > end_col then
+    start_col, end_col = end_col, start_col
+  end
+
+  -- Get the selected text
+  local lines = vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
+
+  if #lines == 0 then
+    return
+  end
+
+  -- Exit visual mode first
+  if vim.fn.mode():match "[vV\22]" then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+  end
+
+  -- Wrap the text
+  if #lines == 1 then
+    -- Single line selection
+    local wrapped = left .. lines[1] .. right
+    vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { wrapped })
+  else
+    -- Multi-line selection
+    lines[1] = left .. lines[1]
+    lines[#lines] = lines[#lines] .. right
+    vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, lines)
+  end
+end
+
+-- Function to wrap current word (for normal mode)
+local function wrap_current_word(left, right)
+  right = right or left
+
+  -- Get current cursor position
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local row = cursor_pos[1] - 1
+  local col = cursor_pos[2]
+
+  -- Get current line
+  local line = vim.api.nvim_buf_get_lines(0, row, row + 1, false)[1]
+  if not line then
+    return
+  end
+
+  -- Find word boundaries
+  local word_start = col
+  local word_end = col
+
+  -- Find start of word (move backwards)
+  while word_start > 0 and line:sub(word_start, word_start):match "[%w_]" do
+    word_start = word_start - 1
+  end
+  if not line:sub(word_start + 1, word_start + 1):match "[%w_]" then
+    word_start = word_start + 1
+  end
+
+  -- Find end of word (move forwards)
+  while word_end < #line and line:sub(word_end + 1, word_end + 1):match "[%w_]" do
+    word_end = word_end + 1
+  end
+
+  -- If no word found, return
+  if word_start >= word_end then
+    return
+  end
+
+  -- Get the word
+  local word = line:sub(word_start + 1, word_end)
+  local wrapped = left .. word .. right
+
+  -- Replace the word
+  vim.api.nvim_buf_set_text(0, row, word_start, row, word_end, { wrapped })
+end
+
+-- Wrap with quotes and brackets (Visual mode)
+map("v", "<leader>a'", function()
+  wrap_selection "'"
+end, { desc = "Wrap selection with single quotes" })
+map("v", '<leader>a"', function()
+  wrap_selection '"'
+end, { desc = "Wrap selection with double quotes" })
+map("v", "<leader>a`", function()
+  wrap_selection "`"
+end, { desc = "Wrap selection with backticks" })
+map("v", "<leader>a(", function()
+  wrap_selection("(", ")")
+end, { desc = "Wrap selection with parentheses" })
+map("v", "<leader>a[", function()
+  wrap_selection("[", "]")
+end, { desc = "Wrap selection with square brackets" })
+map("v", "<leader>a{", function()
+  wrap_selection("{", "}")
+end, { desc = "Wrap selection with curly braces" })
+map("v", "<leader>a<", function()
+  wrap_selection("<", ">")
+end, { desc = "Wrap selection with angle brackets" })
+
+-- Normal mode variants that work on current word
+map("n", "<leader>a'", function()
+  wrap_current_word "'"
+end, { desc = "Wrap current word with single quotes" })
+
+map("n", '<leader>a"', function()
+  wrap_current_word '"'
+end, { desc = "Wrap current word with double quotes" })
+
+map("n", "<leader>a`", function()
+  wrap_current_word "`"
+end, { desc = "Wrap current word with backticks" })
+
+map("n", "<leader>a(", function()
+  wrap_current_word("(", ")")
+end, { desc = "Wrap current word with parentheses" })
+
+map("n", "<leader>a[", function()
+  wrap_current_word("[", "]")
+end, { desc = "Wrap current word with square brackets" })
+
+map("n", "<leader>a{", function()
+  wrap_current_word("{", "}")
+end, { desc = "Wrap current word with curly braces" })
+
+map("n", "<leader>a<", function()
+  wrap_current_word("<", ">")
+end, { desc = "Wrap current word with angle brackets" })

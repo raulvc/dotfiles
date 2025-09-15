@@ -12,6 +12,7 @@ local options = {
     -- html = { "prettier" },
     sh = { "shfmt" },
     bash = { "shfmt" },
+    json = { "fixjson" },
   },
 
   format_on_save = {
