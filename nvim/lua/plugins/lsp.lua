@@ -41,6 +41,7 @@ return {
           "rust_analyzer",
           "kotlin_lsp",
           "jsonls",
+          "yamlls",
         },
       }
     end,
@@ -158,6 +159,34 @@ return {
 
       vim.lsp.config("jsonls", {
         capabilities = capabilities,
+        settings = {
+          json = {
+            format = {
+              enable = false, -- Disable LSP formatting, let conform handle it
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("yamlls", {
+        capabilities = capabilities,
+        settings = {
+          yaml = {
+            format = {
+              enable = false, -- Disable LSP formatting, let conform handle it
+            },
+            validate = true,
+            completion = true,
+            hover = true,
+            schemas = {
+              ["https://json.schemastore.org/github-workflow.json"] = "/.github/workflows/*",
+              ["https://json.schemastore.org/github-action.json"] = "/action.{yml,yaml}",
+              ["https://json.schemastore.org/docker-compose.json"] = "/*docker-compose*.{yml,yaml}",
+              ["https://json.schemastore.org/kustomization.json"] = "/kustomization.{yml,yaml}",
+              kubernetes = "/*.k8s.{yml,yaml}",
+            },
+          },
+        },
       })
 
       -- Keymappings with improved workspace symbols

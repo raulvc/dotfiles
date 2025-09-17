@@ -13,11 +13,16 @@ local options = {
     sh = { "shfmt" },
     bash = { "shfmt" },
     json = { "fixjson" },
+    yaml = { "yamlfmt" },
+    yml = { "yamlfmt" },
   },
 
   formatters = {
     fixjson = {
       args = { "--indent", "2" },
+    },
+    yamlfmt = {
+      args = { "-formatter", "indent=2,retain_line_breaks=true" },
     },
   },
 

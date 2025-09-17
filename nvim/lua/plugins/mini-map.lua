@@ -26,8 +26,10 @@ return {
       window = {
         side = "right",
         width = 10,
-        winblend = 15,
+        winblend = 25,
         show_integration_count = true,
+        focusable = true,
+        zindex = 100,
       },
     }
 

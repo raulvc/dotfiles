@@ -181,7 +181,7 @@ map("n", "<leader>jl", function()
 
   vim.lsp.buf.code_action {
     filter = function(action)
-      return action.title and action.title:match "Join.*arguments.*one.*line"
+      return action.title and action.title:match "Join.*one.*line"
     end,
     apply = true,
   }
