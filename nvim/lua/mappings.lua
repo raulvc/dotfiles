@@ -208,6 +208,7 @@ map("n", "<leader>ga", function()
 end, { desc = "Git diff commit for current line (±10 lines)" })
 
 map("n", "<leader>cc", ":CodeCompanionChat Toggle<CR>", { desc = "Toggle CodeCompanion Chat" })
+map("n", "<leader>ch", ":CodeCompanionHistory<CR>", { desc = "Opens CodeCompanionHistory" })
 
 map({ "n", "i", "v" }, "<M-n>", function()
   -- Create a new scratch buffer each time (not toggle)

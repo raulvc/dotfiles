@@ -41,6 +41,26 @@ return {
 
       require("codecompanion").setup {
         log_level = "DEBUG",
+
+        display = {
+          action_palette = {
+            width = 95,
+            height = 10,
+            prompt = "Prompt ",
+            provider = "telescope", -- or "default"
+          },
+          chat = {
+            window = {
+              layout = "vertical", -- "vertical", "horizontal", "float", "buffer"
+              width = 0.45, -- % of the editor width
+              height = 0.8, -- % of the editor height
+              relative = "editor", -- "editor", "win"
+            },
+            show_settings = true, -- Show model settings in chat buffer
+            show_token_count = true, -- Display token usage
+          },
+        },
+
         strategies = {
           chat = {
             -- adapter = "copilot",
@@ -61,7 +81,7 @@ return {
             return require("codecompanion.adapters").extend("openai", {
               env = {
                 api_key = "REQUESTER_TOKEN",
-                url = "https://generative-ai-platform.ifood-sandbox.com.br/api/v2",
+                url = "GENPLAT_URL",
                 chat_url = "/v1/chat/completions",
                 models_endpoint = "/v1/models",
               },
