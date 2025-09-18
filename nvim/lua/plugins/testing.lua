@@ -337,6 +337,45 @@ return {
         end,
         desc = "Debug current file",
       },
+      {
+        "<leader>tL",
+        function()
+          -- Show last 50 lines of neotest log in a split
+          local log_file = vim.fn.stdpath "log" .. "/neotest.log"
+          if vim.fn.filereadable(log_file) == 1 then
+            -- Create a new split for the log output
+            vim.cmd "botright split"
+            vim.cmd "resize 20"
+            local buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_win_set_buf(0, buf)
+
+            -- Set buffer options
+            vim.bo[buf].buftype = "nofile"
+            vim.bo[buf].swapfile = false
+            vim.bo[buf].filetype = "log"
+
+            -- Use tail command to get last 50 lines
+            vim.fn.jobstart({ "tail", "-n", "50", log_file }, {
+              stdout_buffered = true,
+              on_stdout = function(_, lines)
+                if lines and #lines > 0 then
+                  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+                end
+              end,
+              on_exit = function()
+                -- Go to the end of buffer
+                vim.schedule(function()
+                  local line_count = vim.api.nvim_buf_line_count(buf)
+                  vim.api.nvim_win_set_cursor(0, { line_count, 0 })
+                end)
+              end,
+            })
+          else
+            vim.notify("Neotest log file not found at: " .. log_file, vim.log.levels.WARN)
+          end
+        end,
+        desc = "[t]est [L]ogs (last 50 lines)",
+      },
     },
   },
 }

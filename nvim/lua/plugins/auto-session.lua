@@ -12,7 +12,49 @@ return {
         show_auto_restore_notif = true,
         enabled = true,
         log_level = "info",
+        bypass_save_filetypes = { "alpha", "dashboard", "terminal", "neotest-output-panel", "neotest-summary" },
+        session_lens = {
+          load_on_setup = false, -- Don't auto-load on setup to avoid conflicts
+        },
+        suppressed_dirs = nil,
+
         pre_save_cmds = {
+          function()
+            -- Close neotest UI components (based on <leader>tt mapping logic)
+            pcall(function()
+              local neotest = require "neotest"
+
+              -- Stop running tests first
+              pcall(function()
+                neotest.run.stop()
+              end)
+
+              -- Try different close methods based on what's available (like in <leader>tt)
+              if neotest.summary and neotest.summary.close then
+                neotest.summary.close()
+              elseif neotest.summary and neotest.summary.toggle then
+                -- If no close, try toggle (it will close if open)
+                neotest.summary.toggle()
+              end
+
+              if neotest.output_panel and neotest.output_panel.close then
+                neotest.output_panel.close()
+              end
+
+              if neotest.output and neotest.output.close then
+                neotest.output.close()
+              end
+            end)
+          end,
+
+          function()
+            local terms = require("toggleterm.terminal").get_all()
+            for _, term in pairs(terms) do
+              if term:is_open() then
+                term:close()
+              end
+            end
+          end,
           function()
             require("configs.sessions").save_all()
           end,

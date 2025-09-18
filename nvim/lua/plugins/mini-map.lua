@@ -26,10 +26,10 @@ return {
       window = {
         side = "right",
         width = 10,
-        winblend = 25,
+        winblend = 55,
         show_integration_count = true,
         focusable = true,
-        zindex = 100,
+        zindex = 1,
       },
     }
 
@@ -52,6 +52,11 @@ return {
         "NvimTree",
         "codecompanion",
         "TelescopePrompt",
+        "terminal",
+        "minimap",
+        "neotest-output-panel",
+        "neotest-summary",
+        "neotest-attach",
       }
 
       return bt == "" and not vim.tbl_contains(excluded_ft, ft) and vim.fn.expand "%" ~= ""

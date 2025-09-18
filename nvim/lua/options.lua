@@ -129,12 +129,17 @@ autocmd({ "CursorMoved", "CursorMovedI", "WinScrolled" }, {
 })
 
 autocmd("TermOpen", {
-  desc = "Remove UI clutter in the terminal",
+  desc = "Remove UI clutter in terminal and special buffers",
   callback = function()
-    local is_terminal = api.nvim_get_option_value("buftype", { buf = 0 }) == "terminal"
-    o.number = not is_terminal
-    o.relativenumber = not is_terminal
-    o.signcolumn = is_terminal and "no" or "yes"
+    local buftype = vim.bo.buftype
+    local filetype = vim.bo.filetype
+
+    if buftype == "terminal" or filetype == "minimap" then
+      vim.bo.buflisted = false
+      vim.wo.number = false
+      vim.wo.relativenumber = false
+      vim.wo.signcolumn = "no"
+    end
   end,
 })
 
