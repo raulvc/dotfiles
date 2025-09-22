@@ -28,8 +28,12 @@ return {
           "mfussenegger/nvim-dap-python",
         },
       },
+      {
+        "nvim-neotest/neotest-jest",
+      },
       "mfussenegger/nvim-dap",
     },
+
     opts = function(_, opts)
       opts.output = {
         enabled = true,
@@ -76,6 +80,15 @@ return {
         dap = {
           justMyCode = false,
         },
+      }
+
+      opts.adapters["neotest-jest"] = {
+        jestCommand = "npm test --",
+        jestConfigFile = "jest.config.js",
+        env = { CI = true },
+        cwd = function(path)
+          return vim.fn.getcwd()
+        end,
       }
 
       opts.adapters["neotest-vim-test"] = false

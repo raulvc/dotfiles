@@ -42,6 +42,7 @@ return {
           "kotlin_lsp",
           "jsonls",
           "yamlls",
+          "ts_ls",
         },
       }
     end,
@@ -184,6 +185,50 @@ return {
               ["https://json.schemastore.org/docker-compose.json"] = "/*docker-compose*.{yml,yaml}",
               ["https://json.schemastore.org/kustomization.json"] = "/kustomization.{yml,yaml}",
               kubernetes = "/*.k8s.{yml,yaml}",
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("ts_ls", {
+        capabilities = capabilities,
+        settings = {
+          typescript = {
+            format = {
+              enable = false, -- Disable LSP formatting, let conform handle it
+            },
+            inlayHints = {
+              includeInlayParameterNameHints = "all",
+              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+              includeInlayFunctionParameterTypeHints = true,
+              includeInlayVariableTypeHints = true,
+              includeInlayPropertyDeclarationTypeHints = true,
+              includeInlayFunctionLikeReturnTypeHints = true,
+              includeInlayEnumMemberValueHints = true,
+            },
+            suggest = {
+              includeCompletionsForModuleExports = true,
+            },
+            preferences = {
+              importModuleSpecifier = "relative",
+              includePackageJsonAutoImports = "auto",
+            },
+          },
+          javascript = {
+            format = {
+              enable = false, -- Disable LSP formatting, let conform handle it
+            },
+            inlayHints = {
+              includeInlayParameterNameHints = "all",
+              includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+              includeInlayFunctionParameterTypeHints = true,
+              includeInlayVariableTypeHints = true,
+              includeInlayPropertyDeclarationTypeHints = true,
+              includeInlayFunctionLikeReturnTypeHints = true,
+              includeInlayEnumMemberValueHints = true,
+            },
+            suggest = {
+              includeCompletionsForModuleExports = true,
             },
           },
         },
