@@ -56,7 +56,6 @@ return {
               height = 0.8, -- % of the editor height
               relative = "editor", -- "editor", "win"
             },
-            show_settings = true, -- Show model settings in chat buffer
             show_token_count = true, -- Display token usage
           },
         },
