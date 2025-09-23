@@ -32,25 +32,52 @@ return {
 
       vim.api.nvim_set_hl(0, "NvimTreeTestFile", { bg = "#252c25", fg = "#76946a" })
 
-      vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
-        pattern = "*",
-        callback = function()
-          if vim.bo.filetype == "NvimTree" then
-            vim.defer_fn(function()
-              -- Clear any existing matches
-              vim.fn.clearmatches()
+      local test_patterns = {
+        "_test%.go$",
+        "test%.go$",
+        "%.test%.tsx?$",
+        "%.spec%.tsx?$",
+        "%.test%.jsx?$",
+        "%.spec%.jsx?$",
+      }
 
-              -- Highlight test files line by line
-              local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-              for i, line in ipairs(lines) do
-                if line:match "_test%.go" or line:match "test%.go" then
-                  vim.fn.matchadd("NvimTreeTestFile", "\\%" .. i .. "l.*", 10)
-                end
-              end
-            end, 50)
+      local function is_test_file(filename)
+        for _, pattern in ipairs(test_patterns) do
+          if filename:match(pattern) then
+            return true
           end
-        end,
-      })
+        end
+        return false
+      end
+
+      local highlight_timer = nil
+      local function highlight_test_files()
+        if highlight_timer then
+          vim.fn.timer_stop(highlight_timer)
+        end
+
+        highlight_timer = vim.fn.timer_start(100, function()
+          if vim.bo.filetype == "NvimTree" then
+            -- Clear any existing matches
+            vim.fn.clearmatches()
+
+            -- Get visible lines only for better performance
+            local win = vim.api.nvim_get_current_win()
+            local top_line = vim.fn.line "w0"
+            local bottom_line = vim.fn.line "w$"
+            local lines = vim.api.nvim_buf_get_lines(0, top_line - 1, bottom_line, false)
+
+            for i, line in ipairs(lines) do
+              -- Extract just the filename from the tree line
+              local filename = line:match "[^/]*$" or ""
+              if is_test_file(filename) then
+                vim.fn.matchadd("NvimTreeTestFile", "\\%" .. (top_line + i - 1) .. "l.*", 10)
+              end
+            end
+          end
+          highlight_timer = nil
+        end)
+      end
 
       local api = require "nvim-tree.api"
 
@@ -337,6 +364,32 @@ return {
         },
         on_attach = function(bufnr)
           local api = require "nvim-tree.api"
+
+          -- Highlight test files whenever tree content changes
+          local function setup_tree_highlights()
+            vim.api.nvim_create_autocmd({ "BufEnter", "CursorMoved", "WinScrolled" }, {
+              buffer = bufnr,
+              callback = function()
+                highlight_test_files()
+              end,
+            })
+          end
+
+          -- Set up highlights after a short delay to ensure tree is rendered
+          vim.defer_fn(setup_tree_highlights, 100)
+
+          -- Show full name in command line when cursor moves
+          vim.api.nvim_create_autocmd("CursorMoved", {
+            buffer = bufnr,
+            callback = function()
+              local node = api.tree.get_node_under_cursor()
+              if node then
+                vim.cmd('echo "' .. node.absolute_path:gsub('"', '\\"') .. '"')
+              end
+              -- Also trigger highlight refresh when cursor moves
+              highlight_test_files()
+            end,
+          })
 
           -- Show full name in command line when cursor moves
           vim.api.nvim_create_autocmd("CursorMoved", {
