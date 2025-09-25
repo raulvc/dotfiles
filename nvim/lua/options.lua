@@ -155,7 +155,8 @@ autocmd("BufReadPost", {
 
 vim.api.nvim_create_autocmd("BufWritePre", {
   callback = function(args)
-    vim.lsp.buf.format()
+    require("conform").format { bufnr = args.buf }
+
     vim.lsp.buf.code_action { context = { only = { "source.organizeImports" } }, apply = true }
     vim.lsp.buf.code_action { context = { only = { "source.fixAll" } }, apply = true }
   end,
