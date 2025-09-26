@@ -468,6 +468,15 @@ return {
 
       dapui.setup(opts)
 
+      dap.configurations.go = {
+        {
+          type = "go",
+          name = "Debug",
+          request = "launch",
+          program = "${file}",
+        },
+      }
+
       dap.adapters["pwa-node"] = {
         type = "server",
         host = "localhost",
