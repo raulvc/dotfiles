@@ -477,19 +477,34 @@ return {
         },
       }
 
-      dap.adapters["pwa-node"] = {
-        type = "server",
-        host = "localhost",
-        port = "${port}",
-        executable = {
-          command = "node",
-          -- Install with: npm install -g @vscode/js-debug-companion
-          args = {
-            vim.fn.stdpath "data" .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
-            "${port}",
-          },
-        },
-      }
+      dap.adapters["pwa-node"] = function(callback, config)
+        local port = config.port or get_unused_port()
+
+        local handle = vim.fn.jobstart({
+          "node",
+          vim.fn.stdpath "data" .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
+          tostring(port),
+        }, {
+          detach = true,
+          on_exit = function()
+            vim.notify("js-debug-adapter process exited", vim.log.levels.INFO)
+          end,
+        })
+
+        if handle <= 0 then
+          callback(nil, "Failed to start js-debug-adapter")
+          return
+        end
+
+        -- Wait for the adapter to start
+        vim.defer_fn(function()
+          callback {
+            type = "server",
+            host = "127.0.0.1",
+            port = port,
+          }
+        end, 1000)
+      end
 
       dap.configurations.typescript = {
         {

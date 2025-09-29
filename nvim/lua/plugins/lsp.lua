@@ -118,6 +118,55 @@ return {
 
       vim.lsp.config("pyright", {
         capabilities = capabilities,
+        settings = {
+          python = {
+            analysis = {
+              -- Enable all analysis features
+              typeCheckingMode = "basic", -- or "strict" for more rigorous checking
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+              autoImportCompletions = true,
+              diagnosticMode = "workspace", -- or "openFilesOnly"
+
+              -- Disable specific diagnostics if needed
+              diagnosticSeverityOverrides = {
+                reportMissingImports = "error",
+                reportMissingTypeStubs = "warning",
+                reportUnusedImport = "information",
+                reportUnusedClass = "information",
+                reportUnusedFunction = "information",
+                reportUnusedVariable = "information",
+                reportDuplicateImport = "warning",
+                reportWildcardImportFromLibrary = "warning",
+              },
+
+              -- Include/exclude paths
+              include = {},
+              exclude = {
+                "**/node_modules",
+                "**/__pycache__",
+                "**/.*",
+              },
+
+              -- Stub search paths
+              stubPath = "",
+
+              -- Virtual environment support
+              venvPath = "",
+              venv = "",
+            },
+
+            -- Formatting (disable if using external formatters like black)
+            formatting = {
+              provider = "none", -- Let conform.nvim or other tools handle formatting
+            },
+
+            -- Linting (disable if using external linters like flake8, pylint)
+            linting = {
+              enabled = false, -- Let external linters handle this
+            },
+          },
+        },
       })
 
       vim.lsp.config("hyprls", {
