@@ -232,12 +232,60 @@ return {
             validate = true,
             completion = true,
             hover = true,
+            -- Enable schema store for automatic schema detection
+            schemaStore = {
+              enable = true,
+              url = "https://www.schemastore.org/api/json/catalog.json",
+            },
+            -- Allow custom tags (optional, but useful for some YAML files)
+            customTags = {
+              "!reference sequence",
+              "!reference mapping",
+              "!reference scalar",
+            },
             schemas = {
+              -- GitLab CI/CD
+              ["https://gitlab.com/gitlab-org/gitlab/-/raw/master/app/assets/javascripts/editor/schema/ci.json"] = {
+                "/.gitlab-ci.yml",
+                "/.gitlab-ci.yaml",
+                "/*gitlab-ci*.{yml,yaml}",
+                "/.gitlab/ci/*.{yml,yaml}",
+              },
+              -- GitHub (keeping for reference)
               ["https://json.schemastore.org/github-workflow.json"] = "/.github/workflows/*",
               ["https://json.schemastore.org/github-action.json"] = "/action.{yml,yaml}",
-              ["https://json.schemastore.org/docker-compose.json"] = "/*docker-compose*.{yml,yaml}",
+              -- Docker
+              ["https://json.schemastore.org/docker-compose.json"] = {
+                "/*docker-compose*.{yml,yaml}",
+                "/compose.{yml,yaml}",
+              },
+              -- Kubernetes
               ["https://json.schemastore.org/kustomization.json"] = "/kustomization.{yml,yaml}",
               kubernetes = "/*.k8s.{yml,yaml}",
+              -- Ansible
+              ["https://json.schemastore.org/ansible-playbook.json"] = {
+                "/*playbook*.{yml,yaml}",
+                "/playbooks/**/*.{yml,yaml}",
+              },
+              ["https://json.schemastore.org/ansible-inventory.json"] = {
+                "/inventory.{yml,yaml}",
+                "/inventory/*.{yml,yaml}",
+              },
+              -- Helm
+              ["https://json.schemastore.org/helmfile.json"] = "/helmfile.{yml,yaml}",
+              ["https://json.schemastore.org/chart.json"] = "/Chart.{yml,yaml}",
+              -- CI/CD Tools
+              ["https://json.schemastore.org/azure-pipelines.json"] = "/azure-pipelines.{yml,yaml}",
+              ["https://json.schemastore.org/circleciconfig.json"] = "/.circleci/config.{yml,yaml}",
+              ["https://json.schemastore.org/travisci.json"] = "/.travis.{yml,yaml}",
+              -- Config files
+              ["https://json.schemastore.org/prettierrc.json"] = "/.prettierrc.{yml,yaml}",
+              ["https://json.schemastore.org/dependabot-2.0.json"] = "/.github/dependabot.{yml,yaml}",
+              ["https://json.schemastore.org/renovate.json"] = {
+                "/renovate.{yml,yaml}",
+                "/.renovaterc.{yml,yaml}",
+                "/.github/renovate.{yml,yaml}",
+              },
             },
           },
         },

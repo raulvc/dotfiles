@@ -10,11 +10,10 @@ return {
       "nvim-neotest/neotest-vim-test",
       {
         "fredrikaverpil/neotest-golang",
-        branch = "main",
-        dependencies = {
-          "leoluz/nvim-dap-go",
-          "andythigpen/nvim-coverage",
-        },
+        version = "*", -- Optional, but recommended; track releases
+        build = function()
+          vim.system({ "go", "install", "gotest.tools/gotestsum@latest" }):wait() -- Optional, but recommended
+        end,
       },
       {
         "rouge8/neotest-rust",
@@ -59,7 +58,9 @@ return {
           "-coverprofile=" .. vim.fn.getcwd() .. "/coverage.out",
         },
         runner = "gotestsum",
-        gotestsum_args = { "--format=standard-verbose" },
+        gotestsum_args = {
+          "--format=pkgname-and-test-fails",
+        },
         experimental = {
           test_table = true,
         },
