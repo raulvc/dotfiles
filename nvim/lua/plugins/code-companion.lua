@@ -65,6 +65,15 @@ return {
                 model = {
                   default = "claude-sonnet-4-5-20250929-v1.0",
                 },
+                temperature = {
+                  default = 0, -- Deterministic output, best for coding
+                },
+                top_p = {
+                  default = 1,
+                  condition = function(self)
+                    return false -- Never include top_p
+                  end,
+                },
               },
               url = "${url}${chat_url}",
               headers = {

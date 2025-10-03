@@ -34,6 +34,9 @@ return {
 
       -- Alt + Up to hide terminal without closing
       vim.keymap.set("t", "<M-Up>", [[<Cmd>wincmd k<CR>]], { desc = "Go to buffer above" })
+
+      -- ESC to exit terminal insert mode and enter normal mode
+      vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], { desc = "Exit terminal insert mode" })
     end,
     lazy = false,
   },

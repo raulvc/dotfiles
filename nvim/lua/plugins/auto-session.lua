@@ -5,6 +5,8 @@ return {
     lazy = false,
     priority = 2000,
     config = function()
+      vim.opt.sessionoptions:append "localoptions"
+
       require("auto-session").setup {
         auto_restore = true,
         auto_restore_last_session = false,

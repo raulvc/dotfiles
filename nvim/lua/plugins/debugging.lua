@@ -171,10 +171,62 @@ return {
       {
         "<leader>dB",
         function()
-          require("dap").set_breakpoint(vim.fn.input "Breakpoint condition: ")
+          local dap = require "dap"
+
+          -- Create floating buffer
+          local buf = vim.api.nvim_create_buf(false, true)
+          local width = math.floor(vim.o.columns * 0.6)
+          local height = 1
+
+          -- Calculate center position
+          local row = math.floor((vim.o.lines - height) / 2)
+          local col = math.floor((vim.o.columns - width) / 2)
+
+          -- Open floating window
+          local win = vim.api.nvim_open_win(buf, true, {
+            relative = "editor",
+            width = width,
+            height = height,
+            row = row,
+            col = col,
+            style = "minimal",
+            border = "rounded",
+            title = " Breakpoint Condition ",
+            title_pos = "center",
+          })
+
+          -- Set buffer options for REPL-like behavior
+          vim.bo[buf].buftype = "prompt"
+          vim.bo[buf].filetype = "dap-repl" -- This enables DAP autocomplete!
+
+          -- Set the prompt
+          vim.fn.prompt_setprompt(buf, "condition> ")
+
+          -- Handle Ctrl+Enter to set breakpoint
+          vim.keymap.set("i", "<C-CR>", function()
+            local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+            local condition = lines[1]:gsub("^condition> ", ""):gsub("^%s+", ""):gsub("%s+$", "")
+
+            -- Close the floating window
+            vim.api.nvim_win_close(win, true)
+
+            if condition ~= "" then
+              dap.set_breakpoint(condition)
+              vim.notify("✓ Conditional breakpoint set: " .. condition, vim.log.levels.INFO)
+            end
+          end, { buffer = buf })
+
+          -- Handle Escape to cancel
+          vim.keymap.set({ "n", "i" }, "<Esc>", function()
+            vim.api.nvim_win_close(win, true)
+          end, { buffer = buf })
+
+          -- Start in insert mode
+          vim.cmd "startinsert"
         end,
-        desc = "[d]ebug [B]reakpoint",
+        desc = "[d]ebug conditional [B]reakpoint",
       },
+
       {
         "<leader>dc",
         function()
@@ -362,9 +414,9 @@ return {
       layouts = {
         {
           elements = {
-            { id = "breakpoints", size = 0.25 },
             { id = "stacks", size = 0.25 },
             { id = "scopes", size = 0.35 },
+            { id = "repl", size = 0.25 },
             { id = "watches", size = 0.15 },
           },
           position = "left",
@@ -373,7 +425,30 @@ return {
       },
       render = {
         indent = 1,
-        max_value_lines = 100,
+        max_value_lines = 3,
+        sort_variables = function(a, b)
+          -- Don't sort if either is a slice/array element (contains brackets)
+          local a_is_indexed = a.name:match "%[%d+%]"
+          local b_is_indexed = b.name:match "%[%d+%]"
+
+          if a_is_indexed and b_is_indexed then
+            -- Extract numeric indices and compare numerically
+            local a_idx = tonumber(a.name:match "%[(%d+)%]")
+            local b_idx = tonumber(b.name:match "%[(%d+)%]")
+            if a_idx and b_idx then
+              return a_idx < b_idx
+            end
+          end
+
+          -- Sort by scope first
+          if a.scope ~= b.scope then
+            local order = { ["Locals"] = 1, ["Arguments"] = 2, ["Globals"] = 3 }
+            return (order[a.scope] or 99) < (order[b.scope] or 99)
+          end
+
+          -- Alphabetical for non-indexed variables
+          return a.name < b.name
+        end,
       },
 
       element_mappings = {

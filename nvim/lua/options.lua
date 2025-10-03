@@ -6,7 +6,6 @@ local opt = vim.opt
 local api = vim.api
 
 o.colorcolumn = "120"
-o.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
 
 o.laststatus = 3
 o.showmode = false
