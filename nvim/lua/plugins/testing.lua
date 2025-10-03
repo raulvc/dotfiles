@@ -23,9 +23,6 @@ return {
       },
       {
         "nvim-neotest/neotest-python",
-        dependencies = {
-          "mfussenegger/nvim-dap-python",
-        },
       },
       {
         "nvim-neotest/neotest-jest",

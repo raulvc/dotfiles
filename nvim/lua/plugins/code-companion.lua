@@ -16,29 +16,6 @@ return {
       },
     },
     config = function()
-      local function get_available_copilot_models()
-        local ok, models = pcall(function()
-          return require("copilot.api").get_models()
-        end)
-
-        if ok and models then
-          return models
-        else
-          -- Fallback to your known models
-          return {
-            "gpt-5",
-            "gpt-5-mini",
-            "claude-sonnet-4",
-            "claude-3-7-sonnet",
-            "claude-3-5-sonnet",
-            "gemini-2.5-pro",
-            "gemini-2.0-flash",
-            "o4-mini",
-            "o3-mini",
-          }
-        end
-      end
-
       require("codecompanion").setup {
         log_level = "DEBUG",
 
@@ -71,7 +48,7 @@ return {
             return require("codecompanion.adapters").extend("copilot", {
               schema = {
                 model = {
-                  default = "gpt-5", -- Start with the most powerful model
+                  default = "claude-sonnet-4.5", -- Start with the most powerful model
                 },
               },
             })
@@ -86,7 +63,7 @@ return {
               },
               schema = {
                 model = {
-                  default = "claude-sonnet-4-20250514-v1.0",
+                  default = "claude-sonnet-4-5-20250929-v1.0",
                 },
               },
               url = "${url}${chat_url}",

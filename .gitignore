@@ -1,12 +1,14 @@
 /*
 
 !.gitignore
-nvim/lazy-lock.json
 !nvim
 !nvim/*
+nvim/lazy-lock.json
 !alacritty*
 !zellij
 !zellij/*
 !starship*
 !atuin
 !atuin/*
+!kitty
+!kitty/*

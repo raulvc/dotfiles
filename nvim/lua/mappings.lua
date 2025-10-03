@@ -49,17 +49,27 @@ vim.keymap.set("n", "<C-Tab>", function()
   }
 end, { desc = "Recently closed files" })
 
----- Window resizing (matching zellij resize)
-map("n", "<M-j>", ":resize +2<CR>", { desc = "Resize up (Alt+Shift+Up)" })
-map("n", "<M-k>", ":resize -2<CR>", { desc = "Resize down (Alt+Shift+Down)" })
-map("n", "<M-n>", ":vertical resize +2<CR>", { desc = "Resize right (Alt+Shift+Right)" })
-map("n", "<M-m>", ":vertical resize -2<CR>", { desc = "Resize left (Alt+Shift+Left)" })
+-- ---- Window resizing (matching zellij resize)
+-- map("n", "<M-j>", ":resize +2<CR>", { desc = "Resize up (Alt+Shift+Up)" })
+-- map("n", "<M-k>", ":resize -2<CR>", { desc = "Resize down (Alt+Shift+Down)" })
+-- map("n", "<M-n>", ":vertical resize +2<CR>", { desc = "Resize right (Alt+Shift+Right)" })
+-- map("n", "<M-m>", ":vertical resize -2<CR>", { desc = "Resize left (Alt+Shift+Left)" })
+--
+-- -- Alt + Arrow keys for window navigation
+-- map("n", "<M-Left>", "<C-w>h", { desc = "Move to left window" })
+-- map("n", "<M-Right>", "<C-w>l", { desc = "Move to right window" })
+-- map("n", "<M-Up>", "<C-w>k", { desc = "Move to top window" })
+-- map("n", "<M-Down>", "<C-w>j", { desc = "Move to bottom window" })
+map("n", "<M-Left>", require("smart-splits").move_cursor_left, { desc = "Move to left split" })
+map("n", "<M-Right>", require("smart-splits").move_cursor_right, { desc = "Move to right split" })
+map("n", "<M-Up>", require("smart-splits").move_cursor_up, { desc = "Move to top split" })
+map("n", "<M-Down>", require("smart-splits").move_cursor_down, { desc = "Move to bottom split" })
 
--- Alt + Arrow keys for window navigation
-map("n", "<M-Left>", "<C-w>h", { desc = "Move to left window" })
-map("n", "<M-Right>", "<C-w>l", { desc = "Move to right window" })
-map("n", "<M-Up>", "<C-w>k", { desc = "Move to top window" })
-map("n", "<M-Down>", "<C-w>j", { desc = "Move to bottom window" })
+-- Smart Splits resizing (Alt + hjkl for consistency, or use your preferred keys)
+map("n", "<M-h>", require("smart-splits").resize_left, { desc = "Resize split left" })
+map("n", "<M-j>", require("smart-splits").resize_down, { desc = "Resize split down" })
+map("n", "<M-k>", require("smart-splits").resize_up, { desc = "Resize split up" })
+map("n", "<M-l>", require("smart-splits").resize_right, { desc = "Resize split right" })
 
 -- Bind Alt + Shift + X to toggle zoom
 map("n", "<M-S-x>", function()
