@@ -43,6 +43,7 @@ return {
           "jsonls",
           "yamlls",
           "ts_ls",
+          "sqls",
         },
       }
     end,
@@ -330,6 +331,22 @@ return {
             },
             suggest = {
               includeCompletionsForModuleExports = true,
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("sqls", {
+        capabilities = capabilities,
+        settings = {
+          sqls = {
+            connections = {
+              -- Add your database connections here if needed
+              -- Example:
+              -- {
+              --   driver = "postgresql",
+              --   dataSourceName = "host=127.0.0.1 port=5432 user=postgres password=password dbname=mydb sslmode=disable",
+              -- },
             },
           },
         },
