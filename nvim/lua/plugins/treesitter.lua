@@ -1,30 +1,14 @@
 return {
   {
     "nvim-treesitter/nvim-treesitter",
+    branch = "main",
     event = { "BufReadPost", "BufNewFile" },
     cmd = { "TSInstall", "TSBufEnable", "TSBufDisable", "TSModuleInfo" },
     build = ":TSUpdate",
     lazy = false,
     opts = {
-      ensure_installed = {
-        "c",
-        "lua",
-        "vim",
-        "vimdoc",
-        "query",
-        "javascript",
-        "typescript",
-        "go",
-        "rust",
-        "html",
-        "markdown",
-        "make",
-        "markdown_inline",
-      },
-
       auto_install = true,
       sync_install = false,
-
       highlight = { enable = true },
       indent = { enable = false },
       textobjects = {
@@ -140,12 +124,57 @@ return {
       },
     },
     config = function(_, opts)
-      require("nvim-treesitter.configs").setup(opts)
+      require("nvim-treesitter.config").setup(opts)
+    end,
+    init = function()
+      local parser_installed = {
+        "c",
+        "lua",
+        "vim",
+        "vimdoc",
+        "query",
+        "javascript",
+        "typescript",
+        "go",
+        "rust",
+        "html",
+        "markdown",
+        "make",
+        "markdown_inline",
+      }
+
+      vim.defer_fn(function()
+        require("nvim-treesitter").install(parser_installed)
+      end, 1000)
+      require("nvim-treesitter").update()
+
+      -- auto-start highlights & indentation
+      vim.api.nvim_create_autocmd("FileType", {
+        desc = "User: enable treesitter highlighting",
+        callback = function(ctx)
+          -- highlights
+          local hasStarted = pcall(vim.treesitter.start) -- errors for filetypes with no parser
+
+          -- indent
+          local noIndent = {}
+          if hasStarted and not vim.list_contains(noIndent, ctx.match) then
+            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        end,
+      })
     end,
   },
   {
     "nvim-treesitter/nvim-treesitter-context",
     lazy = false,
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+    },
+  },
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    lazy = false,
+    branch = "main",
     dependencies = {
       "nvim-treesitter/nvim-treesitter",
     },

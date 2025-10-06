@@ -45,8 +45,8 @@ o.timeoutlen = 300
 o.undofile = true
 
 -- Folding using treesitter
-opt.foldmethod = "indent"
-opt.foldexpr = "nvim_treesitter#foldexpr()"
+opt.foldmethod = "expr"
+opt.foldexpr = "v:lua.vim.treesitter.foldexpr()" -- Changed from nvim_treesitter#foldexpr()
 vim.wo.foldenable = false
 
 -- interval for writing swap file to disk, also used by gitsigns

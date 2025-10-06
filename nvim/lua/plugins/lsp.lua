@@ -341,8 +341,10 @@ return {
       -- vim.keymap.set("n", "<leader>gr", builtin.lsp_references, { desc = "[G]oto [R]eferences" })
       vim.keymap.set("n", "<leader>gs", builtin.lsp_dynamic_workspace_symbols, { desc = "[G]oto [S]ymbol" })
       vim.keymap.set("n", "<leader>ds", builtin.lsp_document_symbols, { desc = "[D]ocument [S]ymbols" })
-      vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "[R]e[n]ame" })
-      vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ctions" })
+      vim.keymap.set("n", "<leader>rn", function()
+        return ":IncRename " .. vim.fn.expand "<cword>"
+      end, { expr = true, desc = "[R]e[n]ame" })
+      -- vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ctions" })
       vim.keymap.set("n", "<C-q>", vim.lsp.buf.hover, { desc = "Hover Documentation" })
       vim.keymap.set("n", "<M-r>", builtin.lsp_references, { desc = "[G]oto [R]eferences" })
       vim.keymap.set("n", "<M-g>", builtin.lsp_implementations, { desc = "[G]oto [I]mplementation" })
