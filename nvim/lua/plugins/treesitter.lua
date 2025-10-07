@@ -142,6 +142,7 @@ return {
         "make",
         "markdown_inline",
         "sql",
+        "yaml",
       }
 
       vim.defer_fn(function()

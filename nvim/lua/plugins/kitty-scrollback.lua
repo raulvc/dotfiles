@@ -22,6 +22,14 @@ return {
           KittyScrollbackNvimStatusWinNormal = { link = "Normal" },
           KittyScrollbackNvimPasteWinNormal = { link = "Normal" },
         },
+        callbacks = {
+          after_ready = function()
+            vim.schedule(function()
+              vim.cmd "normal! G" -- Go to bottom
+              vim.api.nvim_feedkeys("/", "n", false) -- Start search mode
+            end)
+          end,
+        },
       },
       -- Configuration for fzf search
       ksb_builtin_last_cmd_output = function()
