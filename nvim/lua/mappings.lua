@@ -122,6 +122,15 @@ end, { desc = "Run linter" })
 local mc = require "multicursor-nvim"
 
 vim.keymap.set({ "n", "v" }, "<Esc>", function()
+  -- Check if we're in a CodeCompanion buffer
+  local buftype = vim.bo.buftype
+  local filetype = vim.bo.filetype
+
+  if filetype == "codecompanion" or buftype == "codecompanion" then
+    -- In CodeCompanion buffer, let Esc work normally (enter visual mode)
+    return "<Esc>"
+  end
+
   if mc.hasCursors() then
     mc.clearCursors()
   else
@@ -424,3 +433,6 @@ end, { desc = "Wrap current word with curly braces" })
 map("n", "<leader>a<", function()
   wrap_current_word("<", ">")
 end, { desc = "Wrap current word with angle brackets" })
+
+-- Half-page navigation
+map("n", "<C-a>", "<C-u>", { desc = "Move up half a page" })

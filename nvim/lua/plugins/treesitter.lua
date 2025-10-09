@@ -121,6 +121,10 @@ return {
           scope_incremental = false,
           node_decremental = "<Backspace>",
         },
+        is_supported = function()
+          local mode = vim.api.nvim_get_mode().mode
+          return mode == "n"
+        end,
       },
     },
     config = function(_, opts)
@@ -143,6 +147,7 @@ return {
         "markdown_inline",
         "sql",
         "yaml",
+        "json",
       }
 
       vim.defer_fn(function()
@@ -158,7 +163,8 @@ return {
           local hasStarted = pcall(vim.treesitter.start) -- errors for filetypes with no parser
 
           -- indent
-          local noIndent = {}
+          local noIndent = { "json", "yaml", "yml" } -- Add filetypes that should use default indentation
+
           if hasStarted and not vim.list_contains(noIndent, ctx.match) then
             vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
           end
