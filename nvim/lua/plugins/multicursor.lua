@@ -69,6 +69,10 @@ return {
       end
     end, { desc = "Place cursors on all matches of last search" })
 
+    vim.keymap.set("v", "<M-CR>", function()
+      mc.matchAllAddCursors()
+    end, { desc = "Add cursors to all matches of selection" })
+
     vim.keymap.set("x", "<C-S-l>", mc.addCursorOperator)
 
     local hl = vim.api.nvim_set_hl

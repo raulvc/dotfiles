@@ -204,6 +204,104 @@ return {
         end
       end
 
+      local function make_tree_entry_for_files()
+        local devicons = require "nvim-web-devicons"
+        local make_entry = require "telescope.make_entry"
+
+        -- Get the base maker to use its structure
+        local base_maker = make_entry.gen_from_file {}
+
+        return function(entry)
+          -- First, create the base entry with all standard fields
+          local base_entry = base_maker(entry)
+          if not base_entry then
+            return nil
+          end
+
+          -- Get the file path
+          local path = base_entry.value
+          local relative = vim.fn.fnamemodify(path, ":.")
+
+          -- Split path into segments for tree structure
+          local segments = vim.split(relative, "/", { plain = true })
+          local depth = #segments - 1
+          local filename = segments[#segments]
+
+          -- Get directory path (everything except filename)
+          local dir = ""
+          if depth > 0 then
+            dir = table.concat(segments, "/", 1, #segments - 1) .. "/"
+          end
+
+          -- Create tree indentation
+          local tree_indent = ""
+          if depth > 0 then
+            tree_indent = string.rep("  ", depth) .. "└─ "
+          end
+
+          -- Get file icon and color
+          local icon, icon_hl = devicons.get_icon(filename, nil, { default = true })
+          icon = icon or "󰈚"
+          icon_hl = icon_hl or "DevIconDefault"
+
+          -- Determine filename highlight based on type
+          local filename_hl = "TelescopeResultsIdentifier"
+
+          -- Test files - green
+          if filename:match "test" or filename:match "spec" or filename:match "mock" then
+            filename_hl = "TelescopeTestFile"
+          -- Config files - yellow
+          elseif filename:match "%.json$" or filename:match "%.ya?ml$" or filename:match "%.toml$" then
+            filename_hl = "String"
+          -- Go files - blue
+          elseif filename:match "%.go$" then
+            filename_hl = "Function"
+          -- Documentation - special
+          elseif filename:match "%.md$" or filename:match "%.txt$" then
+            filename_hl = "Special"
+          end
+
+          -- Pre-build the display string and highlights
+          local display_str = tree_indent .. icon .. " " .. dir .. filename
+          local highlights = {}
+
+          -- Highlight tree indent
+          if #tree_indent > 0 then
+            table.insert(highlights, {
+              { 0, #tree_indent },
+              "TelescopeTreeIndent",
+            })
+          end
+
+          -- Highlight icon
+          table.insert(highlights, {
+            { #tree_indent, #tree_indent + #icon },
+            icon_hl,
+          })
+
+          -- Highlight directory path (dimmed)
+          if #dir > 0 then
+            table.insert(highlights, {
+              { #tree_indent + #icon + 1, #tree_indent + #icon + 1 + #dir },
+              "Comment",
+            })
+          end
+
+          -- Highlight filename based on type
+          table.insert(highlights, {
+            { #tree_indent + #icon + 1 + #dir, #display_str },
+            filename_hl,
+          })
+
+          -- Override only the display function, keep all other base_entry fields
+          base_entry.display = function()
+            return display_str, highlights
+          end
+
+          return base_entry
+        end
+      end
+
       local previewers = require "telescope.previewers"
       local ns_pathbar = vim.api.nvim_create_namespace "TelescopePathBarNS"
 
@@ -317,8 +415,6 @@ return {
             i = {
               ["<Esc>"] = actions.close,
               ["<CR>"] = smart_open_file,
-              ["<M-Down>"] = actions.cycle_history_next,
-              ["<M-Up>"] = actions.cycle_history_prev,
             },
           },
           file_previewer = with_preview_winbar(previewers.vim_buffer_cat.new),
@@ -334,10 +430,10 @@ return {
             },
           },
           find_files = {
-            entry_maker = make_file_entry_with_test_highlight(),
+            entry_maker = make_tree_entry_for_files(),
             hidden = true,
             layout_config = {
-              preview_width = 0.7, -- Balanced for file browsing
+              preview_width = 0.5, -- Balanced for file browsing
             },
           },
           buffers = {
@@ -490,6 +586,9 @@ return {
           TelescopeTestFile = { bg = "#2a3f2a", fg = colors.green }, -- Green tint for test files
           TelescopePathBar = { bg = bar_bg, fg = bar_fg, bold = true },
           TelescopePathBarSep = { bg = colors.bg, fg = bar_bg },
+          -- Additional highlights for tree view
+          TelescopeResultsIdentifier = { fg = colors.blue },
+          TelescopeTreeIndent = { fg = colors.gray },
         }
 
         for group, opts in pairs(highlights) do
