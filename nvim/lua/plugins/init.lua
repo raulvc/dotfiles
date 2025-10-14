@@ -111,20 +111,6 @@ return {
     lazy = false,
   },
   {
-    "lewis6991/gitsigns.nvim",
-    event = "User FilePost",
-    lazy = false,
-    opts = function()
-      return {
-        signs = {
-          delete = { text = "󰍵" },
-          changedelete = { text = "󱕖" },
-        },
-      }
-    end,
-  },
-
-  {
     "akinsho/bufferline.nvim",
     version = "*",
     lazy = false,

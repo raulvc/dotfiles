@@ -42,9 +42,32 @@ return {
 
       opts.log_level = vim.log.levels.DEBUG
 
+      -- Disable discovery to prevent scanning on startup
+      opts.discovery = {
+        enabled = false, -- Only discover tests when explicitly running them
+      }
+
       quickfix = { require("trouble").open { mode = "quickfix", focus = false } }
 
       opts.adapters = opts.adapters or {}
+
+      -- Helper function to find project root
+      local function find_root(patterns)
+        return function(path)
+          local lib = require "neotest.lib"
+          local root = lib.files.match_root_pattern(unpack(patterns))(path)
+
+          -- Safety check: never use home or .config as root
+          local home = vim.fn.expand "~"
+          local config_dir = vim.fn.expand "~/.config"
+
+          if root == home or root == config_dir or not root then
+            return vim.fn.getcwd() -- Fallback to current working directory
+          end
+
+          return root
+        end
+      end
 
       -- Go: go test with DAP (dlv)
       opts.adapters["neotest-golang"] = {
@@ -65,11 +88,14 @@ return {
         env = {
           GOEXPERIMENT = "synctest",
         },
+
+        root_dir = find_root { "go.mod", "go.work", ".git" },
       }
 
       -- Rust: codelldb via rust-tools
       opts.adapters["neotest-rust"] = {
         dap = true,
+        root_dir = find_root { "Cargo.toml", ".git" },
       }
 
       -- Python: debugpy
@@ -77,6 +103,7 @@ return {
         dap = {
           justMyCode = false,
         },
+        root_dir = find_root { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "pytest.ini", ".git" },
       }
 
       opts.adapters["neotest-jest"] = {
@@ -86,6 +113,7 @@ return {
         cwd = function(path)
           return vim.fn.getcwd()
         end,
+        root_dir = find_root { "package.json", ".git" },
       }
 
       opts.adapters["neotest-vim-test"] = false

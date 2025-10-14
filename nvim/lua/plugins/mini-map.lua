@@ -64,8 +64,12 @@ return {
 
     vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
       callback = function()
-        if should_open_map() and not map.current.win_id then
-          map.open()
+        if should_open_map() then
+          if not map.current.win_id then
+            map.open()
+          end
+        else
+          map.close()
         end
       end,
     })

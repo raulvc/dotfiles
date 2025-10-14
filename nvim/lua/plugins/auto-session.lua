@@ -21,6 +21,13 @@ return {
         suppressed_dirs = nil,
 
         pre_save_cmds = {
+          -- Close minimap first to prevent handle errors
+          function()
+            pcall(function()
+              require("mini.map").close()
+            end)
+          end,
+
           function()
             -- Close neotest UI components (based on <leader>tt mapping logic)
             pcall(function()
