@@ -38,39 +38,6 @@ return {
   { "rafamadriz/friendly-snippets" },
 
   {
-    "rebelot/kanagawa.nvim",
-    lazy = false,
-    branch = "master",
-    config = function()
-      require("kanagawa").setup {
-        transparent = false,
-        colors = {
-          theme = {
-            all = {
-              ui = {
-                bg_gutter = "none",
-              },
-            },
-          },
-        },
-        overrides = function(colors)
-          local theme = colors.theme
-          return {
-            ["@markup.link.url.markdown_inline"] = { link = "Special" }, -- (url)
-            ["@markup.link.label.markdown_inline"] = { link = "WarningMsg" }, -- [label]
-            ["@markup.italic.markdown_inline"] = { link = "Exception" }, -- *italic*
-            ["@markup.raw.markdown_inline"] = { link = "String" }, -- `code`
-            ["@markup.list.markdown"] = { link = "Function" }, -- + list
-            ["@markup.quote.markdown"] = { link = "Error" }, -- > blockcode
-            ["@markup.list.checked.markdown"] = { link = "WarningMsg" }, -- - [X] checked list item
-          }
-        end,
-      }
-      vim.cmd "colorscheme kanagawa"
-    end,
-  },
-
-  {
     "kylechui/nvim-surround",
     version = "*",
     event = "VeryLazy",
@@ -101,7 +68,6 @@ return {
       require("yaml_nvim").setup { ft = { "yaml" } }
     end,
   },
-
   {
     "lukas-reineke/virt-column.nvim",
     opts = {},
@@ -109,46 +75,6 @@ return {
       require("virt-column").setup()
     end,
     lazy = false,
-  },
-  {
-    "akinsho/bufferline.nvim",
-    version = "*",
-    lazy = false,
-    dependencies = "nvim-tree/nvim-web-devicons",
-    opts = {
-      options = {
-        mode = "buffers",
-        separator_style = "slant",
-        diagnostics = "nvim_lsp",
-        middle_mouse_command = "bdelete! %d",
-        indicator = {
-          style = "icon",
-        },
-        offsets = {
-          {
-            filetype = "NvimTree",
-            text = function()
-              return vim.fn.getcwd()
-            end,
-            highlight = "Directory",
-            text_align = "left",
-            separator = true,
-          },
-        },
-      },
-    },
-  },
-  {
-    "nvim-lualine/lualine.nvim",
-    lazy = false,
-    dependencies = { "nvim-tree/nvim-web-devicons" },
-    config = function()
-      require("lualine").setup {
-        options = {
-          theme = "auto",
-        },
-      }
-    end,
   },
   {
     {

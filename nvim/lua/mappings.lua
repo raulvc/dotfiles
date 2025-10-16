@@ -97,10 +97,7 @@ map("n", "<C-PageDown>", ":BufferLineCycleNext<CR>", { desc = "Next tab" })
 
 -- === FILE SEARCH (Ctrl+P) ===
 map("n", "<C-p>", function()
-  require("telescope.builtin").find_files {
-    hidden = true,
-    no_ignore = false,
-  }
+  require("telescope.builtin").find_files()
 end, { desc = "Go to File (Tree View - Ctrl+P)" })
 
 -- === SEARCH IN FILES (Alt + Shift + s) ===

@@ -126,82 +126,75 @@ return {
         local picker = action_state.get_current_picker(prompt_bufnr)
         local multi = picker and picker:get_multi_selection() or {}
 
-        -- Handle non-file selections (like commands)
+        -- Handle non-file selections (like commands) - use default action
         if not selection or (not selection.path and not selection.filename) then
           pcall(actions.select_default, prompt_bufnr)
           return
         end
 
-        -- 1) multi-selection present (length > 0)
-        -- 2) or current entry is not a file-like item
+        -- Multi-selection or non-file - use default action
         if (multi and #multi > 0) or not is_file_entry(selection) then
           pcall(actions.select_default, prompt_bufnr)
           return
         end
 
-        pcall(actions.close, prompt_bufnr)
-
-        -- Get the file path (grep results use .filename, file pickers use .path)
+        -- For file selections, we need custom behavior
+        -- Store the file info before closing
         local file_path = selection.filename or selection.path
+        local lnum = selection.lnum
+        local col = selection.col
+
         if not file_path then
+          pcall(actions.select_default, prompt_bufnr)
           return
         end
 
-        -- Check nvim-tree state
-        local tree_was_open = false
-        local ok, api = pcall(require, "nvim-tree.api")
-        if ok then
-          tree_was_open = pcall(api.tree.is_visible) and api.tree.is_visible()
-        end
+        -- Use default action to let telescope-all-recent track it
+        pcall(actions.select_default, prompt_bufnr)
 
-        -- Count actual content windows (exclude nvim-tree)
-        local content_windows = 0
-        for _, win in ipairs(vim.api.nvim_list_wins()) do
-          local success, buf = pcall(vim.api.nvim_win_get_buf, win)
-          if success then
-            local buf_name = pcall(vim.api.nvim_buf_get_name, buf) and vim.api.nvim_buf_get_name(buf) or ""
-            local filetype_ok, filetype = pcall(vim.api.nvim_buf_get_option, buf, "filetype")
+        -- Then immediately apply our custom navigation logic
+        vim.schedule(function()
+          local tree_was_open = false
+          local ok_tree, api = pcall(require, "nvim-tree.api")
+          if ok_tree then
+            tree_was_open = pcall(api.tree.is_visible) and api.tree.is_visible()
+          end
 
-            -- Skip nvim-tree windows
-            if filetype_ok and filetype ~= "NvimTree" and not buf_name:match "NvimTree" then
-              content_windows = content_windows + 1
+          local content_windows = 0
+          for _, win in ipairs(vim.api.nvim_list_wins()) do
+            local success, buf = pcall(vim.api.nvim_win_get_buf, win)
+            if success then
+              local buf_name = pcall(vim.api.nvim_buf_get_name, buf) and vim.api.nvim_buf_get_name(buf) or ""
+              local filetype_ok, filetype = pcall(vim.api.nvim_buf_get_option, buf, "filetype")
+              if filetype_ok and filetype ~= "NvimTree" and not buf_name:match "NvimTree" then
+                content_windows = content_windows + 1
+              end
             end
           end
-        end
 
-        -- Smart behavior: new tab if only one content window, edit if multiple
-        if content_windows <= 1 then
-          -- Only one content window: open in new tab
-          pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(file_path))
-        else
-          -- Multiple content windows (actual splits): open in current buffer
-          pcall(vim.cmd, "edit " .. vim.fn.fnameescape(file_path))
-        end
+          -- Re-navigate based on our smart logic
+          if content_windows <= 1 then
+            pcall(vim.cmd, "tabedit " .. vim.fn.fnameescape(file_path))
+          end
+          -- If multiple windows, file is already open from select_default
 
-        -- Position cursor for grep results (line and column info)
-        if selection.lnum and selection.col then
-          pcall(vim.api.nvim_win_set_cursor, 0, { selection.lnum, math.max(0, (selection.col - 1)) })
-          -- Center the line on screen
-          pcall(vim.cmd, "normal! zz")
-        end
+          if lnum and col then
+            pcall(vim.api.nvim_win_set_cursor, 0, { lnum, math.max(0, (col - 1)) })
+            pcall(vim.cmd, "normal! zz")
+          end
 
-        local file_win_ok, file_win = pcall(vim.api.nvim_get_current_win)
-        if not file_win_ok then
-          return
-        end
-
-        -- Restore nvim-tree and sync if it was open
-        if tree_was_open and ok then
-          pcall(function()
-            if not api.tree.is_visible() then
-              api.tree.open()
-            end
-            vim.schedule(function()
-              pcall(api.tree.find_file, file_path)
-              pcall(vim.api.nvim_set_current_win, file_win)
+          if tree_was_open and ok_tree then
+            pcall(function()
+              if not api.tree.is_visible() then
+                api.tree.open()
+              end
+              vim.schedule(function()
+                pcall(api.tree.find_file, file_path)
+                pcall(vim.api.nvim_set_current_win, vim.api.nvim_get_current_win())
+              end)
             end)
-          end)
-        end
+          end
+        end)
       end
 
       local function make_tree_entry_for_files()
@@ -488,6 +481,14 @@ return {
         },
 
         extensions = {
+          ["ui-select"] = {
+            require("telescope.themes").get_dropdown {
+              winblend = 10,
+              border = true,
+              previewer = false,
+              shorten_path = false,
+            },
+          },
           fzf = {
             fuzzy = true,
             override_generic_sorter = true,
@@ -605,6 +606,7 @@ return {
       -- Set highlights immediately
       set_telescope_highlights()
 
+      require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"
       require("telescope").load_extension "noice"
       require("telescope").load_extension "undo"
@@ -613,58 +615,46 @@ return {
       end, { desc = "Open Telescope Undo" })
     end,
   },
-
-  {
-    "nvim-telescope/telescope-ui-select.nvim",
-    config = function()
-      require("telescope").setup {
-        extensions = {
-          ["ui-select"] = {
-            require("telescope.themes").get_dropdown {
-              winblend = 10,
-              border = true,
-              previewer = false,
-              shorten_path = false,
-            },
-          },
-        },
-      }
-      require("telescope").load_extension "ui-select"
-    end,
-  },
-
   {
     "nvim-telescope/telescope-symbols.nvim",
     lazy = true,
   },
-
   {
     "prochri/telescope-all-recent.nvim",
+    lazy = false,
     dependencies = {
       "nvim-telescope/telescope.nvim",
-      "kkharji/sqlite.lua", -- Optional but recommended for persistence
+      "kkharji/sqlite.lua",
+      "nvim-telescope/telescope-ui-select.nvim",
     },
-    lazy = false,
-    config = function()
-      require("telescope-all-recent").setup {
-        default = {
-          disable = true, -- Disable for all pickers by default
+    opts = {
+      -- Database configuration
+      database = {
+        folder = vim.fn.stdpath "data",
+        file = "telescope-all-recent.sqlite3",
+        max_timestamps = 10,
+      },
+      debug = false,
+      -- Pickers to enable
+      default = {
+        disable = true, -- Disable for all by default
+        sorting = "recent",
+      },
+      pickers = {
+        -- Enable only for these pickers
+        find_files = {
+          disable = false,
+          use_cwd = true,
         },
-        pickers = {
-          commands = {
-            disable = false, -- Only enable for commands
-            use_cwd = false, -- Commands aren't directory-specific
-            sorting = "frecency", -- Use frecency algorithm
-            prompt_title = "🚀 Recent Commands",
-          },
-          live_grep = {
-            disable = false, -- Enable for live_grep
-            use_cwd = true, -- Make searches directory-specific
-            sorting = "recent", -- Show most recent searches first
-            prompt_title = "🔍 Recent Live Grep",
-          },
+        live_grep = {
+          disable = false,
+          use_cwd = true,
         },
-      }
-    end,
+        commands = {
+          disable = false,
+          use_cwd = false,
+        },
+      },
+    },
   },
 }
