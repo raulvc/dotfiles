@@ -148,6 +148,7 @@ return {
         "sql",
         "yaml",
         "json",
+        "proto",
       }
 
       vim.defer_fn(function()

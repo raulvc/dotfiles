@@ -44,6 +44,7 @@ return {
           "yamlls",
           "ts_ls",
           "sqls",
+          "buf_ls",
         },
       }
     end,
@@ -349,6 +350,14 @@ return {
               -- },
             },
           },
+        },
+      })
+
+      vim.lsp.config("buf_ls", {
+        capabilities = capabilities,
+        settings = {
+          -- buf_ls uses buf.yaml for most configuration
+          -- Additional settings can be added here if needed
         },
       })
 

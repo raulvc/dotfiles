@@ -41,6 +41,16 @@ return {
           chat = {
             -- adapter = "copilot",
             adapter = "genplat",
+            slash_commands = {
+              ["buffer"] = {
+                keymaps = {
+                  modes = {
+                    i = "<C-b>",
+                    n = { "<C-b>", "gb" },
+                  },
+                },
+              },
+            },
           },
         },
         adapters = {
