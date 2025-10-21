@@ -149,6 +149,7 @@ return {
         "yaml",
         "json",
         "proto",
+        "bash",
       }
 
       vim.defer_fn(function()

@@ -70,6 +70,7 @@ return {
 
       vim.lsp.config("bashls", {
         capabilities = capabilities,
+        filetypes = { "sh", "bash" },
       })
 
       vim.lsp.config("gopls", {

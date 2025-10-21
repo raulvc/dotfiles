@@ -434,3 +434,17 @@ end, { desc = "Wrap current word with angle brackets" })
 
 -- Half-page navigation
 map("n", "<C-a>", "<C-u>", { desc = "Move up half a page" })
+
+-- Sublime-style End key behavior (exclude line break)
+map({ "n", "v" }, "<End>", function()
+  local line = vim.api.nvim_get_current_line()
+  local last_col = #line
+
+  if vim.fn.mode():match "[vV\22]" then
+    -- In visual mode, move to last character (not line break)
+    vim.cmd("normal! " .. last_col .. "|")
+  else
+    -- In normal mode
+    vim.cmd("normal! " .. last_col .. "|")
+  end
+end, { desc = "Move to end of line (exclude line break)" })

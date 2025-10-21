@@ -543,15 +543,15 @@ return {
         local function rgb_to_hex(r, g, b)
           return string.format("#%02x%02x%02x", math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5))
         end
-        local function blend(fg, bg, alpha) -- alpha: 0..1 amount of fg over bg
+        local function blend(fg, bg, alpha)
           local fr, fgc, fb = hex_to_rgb(fg)
           local br, bgC, bb = hex_to_rgb(bg)
           return rgb_to_hex(br + (fr - br) * alpha, bgC + (fgc - bgC) * alpha, bb + (fb - bb) * alpha)
         end
 
         local colors = {
-          bg = "#1f1f28", -- Kanagawa wave background
-          bg_dark = "#16161d", -- Darker background
+          bg = "#1f1f28", -- Unified background for all windows
+          bg_dark = "#16161d", -- Slightly darker for subtle depth
           fg = "#dcd7ba", -- Kanagawa foreground
           blue = "#7e9cd8", -- Kanagawa blue
           cyan = "#6a9589", -- Kanagawa cyan
@@ -561,7 +561,7 @@ return {
           red = "#e82424", -- Kanagawa red
           yellow = "#e6c384", -- Kanagawa yellow
           gray = "#54546d", -- Kanagawa gray
-          border = "#2d4f67", -- Subtle border color
+          border = "#54546d", -- Softer border using gray
         }
 
         local bar_bg = blend(colors.yellow, colors.bg, 0.22) -- subtle yellow tint
@@ -570,10 +570,10 @@ return {
         local highlights = {
           TelescopeNormal = { bg = colors.bg, fg = colors.fg },
           TelescopeBorder = { bg = colors.bg, fg = colors.border },
-          TelescopePromptNormal = { bg = colors.bg_dark, fg = colors.fg },
-          TelescopePromptBorder = { bg = colors.bg_dark, fg = colors.blue },
+          TelescopePromptNormal = { bg = colors.bg, fg = colors.fg },
+          TelescopePromptBorder = { bg = colors.bg, fg = colors.blue },
           TelescopePromptTitle = { bg = colors.blue, fg = colors.bg, bold = true },
-          TelescopePromptPrefix = { bg = colors.bg_dark, fg = colors.blue },
+          TelescopePromptPrefix = { bg = colors.bg, fg = colors.blue },
           TelescopeResultsNormal = { bg = colors.bg, fg = colors.fg },
           TelescopeResultsBorder = { bg = colors.bg, fg = colors.border },
           TelescopeResultsTitle = { bg = colors.bg, fg = colors.fg },
