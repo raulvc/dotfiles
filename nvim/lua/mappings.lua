@@ -440,11 +440,20 @@ map({ "n", "v" }, "<End>", function()
   local line = vim.api.nvim_get_current_line()
   local last_col = #line
 
-  if vim.fn.mode():match "[vV\22]" then
-    -- In visual mode, move to last character (not line break)
-    vim.cmd("normal! " .. last_col .. "|")
+  -- Handle empty lines
+  if last_col == 0 then
+    return
+  end
+
+  local mode = vim.fn.mode()
+
+  if mode:match "[vV\22]" then
+    -- In visual mode, move to last character (0-indexed position)
+    -- We need to set the cursor position directly, not use motions
+    local current_line = vim.fn.line "."
+    vim.api.nvim_win_set_cursor(0, { current_line, last_col - 1 })
   else
-    -- In normal mode
-    vim.cmd("normal! " .. last_col .. "|")
+    -- In normal mode, move to last character (0-indexed position)
+    vim.api.nvim_win_set_cursor(0, { vim.fn.line ".", last_col - 1 })
   end
 end, { desc = "Move to end of line (exclude line break)" })
