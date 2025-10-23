@@ -71,7 +71,10 @@ return {
               -- Extract just the filename from the tree line
               local filename = line:match "[^/]*$" or ""
               if is_test_file(filename) then
-                vim.fn.matchadd("NvimTreeTestFile", "\\%" .. (top_line + i - 1) .. "l.*", 10)
+                -- Match only the icon and filename, skipping tree structure chars (│├└─ etc)
+                -- Pattern: skip tree chars, then match icon (emoji/nerd font) + space + filename
+                local pattern = "\\%" .. (top_line + i - 1) .. "l[│├└─ ]*\\zs[^ │├└─].*"
+                vim.fn.matchadd("NvimTreeTestFile", pattern, 10)
               end
             end
           end
