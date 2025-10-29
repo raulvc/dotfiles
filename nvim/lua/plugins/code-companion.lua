@@ -39,8 +39,8 @@ return {
 
         strategies = {
           chat = {
-            -- adapter = "copilot",
-            adapter = "genplat",
+            adapter = "copilot",
+            -- adapter = "genplat",
             slash_commands = {
               ["buffer"] = {
                 keymaps = {
@@ -74,6 +74,10 @@ return {
               schema = {
                 model = {
                   default = "claude-sonnet-4-5-20250929-v1.0",
+                  choices = {
+                    "claude-sonnet-4-5-20250929-v1.0",
+                    "claude-opus-4-1-20250805-v1.0",
+                  },
                 },
                 temperature = {
                   default = 0, -- Deterministic output, best for coding

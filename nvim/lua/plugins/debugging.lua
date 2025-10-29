@@ -130,6 +130,76 @@ end
 local dap_breakpoints = require "configs.dap_breakpoints"
 dap_breakpoints.setup_autocmds()
 
+local function show_breakpoints_telescope()
+  local dap = require "dap"
+  local dap_breakpoints = require "dap.breakpoints"
+  local breakpoints = dap_breakpoints.get()
+
+  -- Convert breakpoints to quickfix format for telescope
+  local qf_list = {}
+  for buf, buf_bps in pairs(breakpoints) do
+    local filepath = vim.api.nvim_buf_get_name(buf)
+    if filepath and filepath ~= "" then
+      for _, bp in ipairs(buf_bps) do
+        table.insert(qf_list, {
+          filename = filepath,
+          lnum = bp.line,
+          col = 1,
+          text = string.format(
+            "%s%s",
+            bp.condition and "🟡 " or "🔴 ",
+            bp.condition and ("condition: " .. bp.condition) or "breakpoint"
+          ),
+        })
+      end
+    end
+  end
+
+  if #qf_list == 0 then
+    vim.notify("No breakpoints set", vim.log.levels.INFO)
+    return
+  end
+
+  -- Use telescope to display breakpoints
+  require("telescope.pickers")
+    .new({}, {
+      prompt_title = "DAP Breakpoints",
+      finder = require("telescope.finders").new_table {
+        results = qf_list,
+        entry_maker = require("telescope.make_entry").gen_from_quickfix(),
+      },
+      sorter = require("telescope.config").values.generic_sorter {},
+      previewer = require("telescope.config").values.qflist_previewer {},
+      attach_mappings = function(prompt_bufnr, map)
+        local actions = require "telescope.actions"
+        local action_state = require "telescope.actions.state"
+
+        -- Delete breakpoint with 'd'
+        map("n", "d", function()
+          local selection = action_state.get_selected_entry()
+          if selection then
+            -- Find and remove the breakpoint
+            local buf = vim.fn.bufnr(selection.filename)
+            if buf ~= -1 then
+              -- Set cursor to the breakpoint line and toggle it
+              local current_win = vim.api.nvim_get_current_win()
+              vim.api.nvim_win_set_buf(current_win, buf)
+              vim.api.nvim_win_set_cursor(current_win, { selection.lnum, 0 })
+              dap.toggle_breakpoint()
+              vim.notify("Breakpoint removed", vim.log.levels.INFO)
+            end
+            -- Refresh the picker
+            actions.close(prompt_bufnr)
+            vim.schedule(show_breakpoints_telescope)
+          end
+        end)
+
+        return true
+      end,
+    })
+    :find()
+end
+
 return {
 
   {
@@ -333,6 +403,13 @@ return {
           require("dap").clear_breakpoints()
         end,
         desc = "[d]ebug [R]emove breakpoints",
+      },
+      {
+        "<leader>dL",
+        function()
+          show_breakpoints_telescope()
+        end,
+        desc = "[d]ebug [L]ist breakpoints",
       },
       {
         "<leader>ds",
