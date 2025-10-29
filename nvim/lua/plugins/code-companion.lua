@@ -117,7 +117,7 @@ return {
                   -- Default number of memories to retrieve
                   default_num = 30,
                 },
-                index_on_startup = true,
+                index_on_startup = vim.env.KITTY_SCROLLBACK_NVIM == nil,
               },
             },
           },

@@ -608,7 +608,10 @@ return {
 
       require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"
-      require("telescope").load_extension "noice"
+      if not vim.env.KITTY_SCROLLBACK_NVIM then
+        require("telescope").load_extension "noice"
+      end
+
       require("telescope").load_extension "undo"
       vim.api.nvim_create_user_command("UndoTelescope", function()
         require("telescope").extensions.undo.undo()

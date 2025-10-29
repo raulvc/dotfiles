@@ -14,7 +14,14 @@ return {
         show_auto_restore_notif = true,
         enabled = true,
         log_level = "info",
-        bypass_save_filetypes = { "alpha", "dashboard", "terminal", "neotest-output-panel", "neotest-summary" },
+        bypass_save_filetypes = {
+          "alpha",
+          "dashboard",
+          "terminal",
+          "neotest-output-panel",
+          "neotest-summary",
+          "kitty-scrollback",
+        },
         session_lens = {
           load_on_setup = false, -- Don't auto-load on setup to avoid conflicts
         },
