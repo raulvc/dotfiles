@@ -21,6 +21,27 @@ local function get_unused_port()
   return tcp_t.port
 end
 
+-- Read REQUESTER_TOKEN from file
+local function get_requester_token()
+  local token_file = vim.fn.expand "~/requester_token"
+  local file = io.open(token_file, "r")
+  if not file then
+    vim.notify("Warning: Could not read ~/requester_token", vim.log.levels.WARN)
+    return nil
+  end
+  local token = file:read "*all"
+  file:close()
+  -- Trim whitespace/newlines
+  return token and token:match "^%s*(.-)%s*$" or nil
+end
+
+local REQUESTER_TOKEN = get_requester_token()
+
+-- Set as global environment variable for all DAP sessions
+if REQUESTER_TOKEN then
+  vim.env.REQUESTER_TOKEN = REQUESTER_TOKEN
+end
+
 -- Generic function to create debug terminal
 local function create_debug_terminal(name)
   -- Clean up existing terminal
@@ -541,6 +562,12 @@ return {
           expand = { "<CR>", "<2-LeftMouse>" },
           repl = "r",
         },
+        watches = {
+          edit = "e",
+          expand = { "<CR>", "<2-LeftMouse>" },
+          remove = "d",
+          repl = "r",
+        },
       },
       expand_lines = vim.fn.has "nvim-0.7" == 1,
       mappings = {
@@ -633,6 +660,14 @@ return {
       end
 
       dapui.setup(opts)
+
+      -- Fix ESC in REPL to properly exit insert mode
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "dap-repl",
+        callback = function(ev)
+          vim.keymap.set("i", "<Esc>", "<C-\\><C-n>", { buffer = ev.buf, silent = true, nowait = true })
+        end,
+      })
 
       dap.configurations.go = {
         {

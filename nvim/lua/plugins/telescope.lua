@@ -381,6 +381,7 @@ return {
             "--column",
             "--smart-case",
             "--hidden",
+            "--no-ignore", -- Add this to show files in .gitignore
             "--glob=!.git/", -- Exclude .git directory for performance
           },
           file_ignore_patterns = { "^.git/" }, -- Exclude .git directory
@@ -425,6 +426,7 @@ return {
           find_files = {
             entry_maker = make_tree_entry_for_files(),
             hidden = true,
+            no_ignore = true,
             layout_config = {
               preview_width = 0.5, -- Balanced for file browsing
             },

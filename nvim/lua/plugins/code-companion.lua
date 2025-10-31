@@ -39,8 +39,8 @@ return {
 
         strategies = {
           chat = {
-            adapter = "copilot",
-            -- adapter = "genplat",
+            -- adapter = "copilot",
+            adapter = "genplat",
             slash_commands = {
               ["buffer"] = {
                 keymaps = {

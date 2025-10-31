@@ -239,18 +239,9 @@ end, { desc = "Git diff commit for current line (±10 lines)" })
 map("n", "<leader>cc", ":CodeCompanionChat Toggle<CR>", { desc = "Toggle CodeCompanion Chat" })
 map("n", "<leader>ch", ":CodeCompanionHistory<CR>", { desc = "Opens CodeCompanionHistory" })
 
-map({ "n", "i", "v" }, "<M-n>", function()
+map({ "n", "i", "v" }, "<M-q>", function()
   -- Create a new scratch buffer each time (not toggle)
-  Snacks.scratch.open {
-    win = {
-      -- This ensures we get a fresh buffer
-      buf = -1,
-    },
-  }
-  -- Enter insert mode after the buffer is created
-  vim.schedule(function()
-    vim.cmd "startinsert"
-  end)
+  Snacks.scratch.open()
 end, { desc = "Open new scratch buffer" })
 
 -- === TEXT WRAPPING MAPPINGS ===
