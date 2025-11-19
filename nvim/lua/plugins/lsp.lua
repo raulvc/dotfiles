@@ -45,6 +45,7 @@ return {
           "ts_ls",
           "sqls",
           "buf_ls",
+          "terraformls",
         },
       }
     end,
@@ -359,6 +360,20 @@ return {
         settings = {
           -- buf_ls uses buf.yaml for most configuration
           -- Additional settings can be added here if needed
+        },
+      })
+
+      vim.lsp.config("terraformls", {
+        capabilities = capabilities,
+        filetypes = { "terraform", "tf", "hcl" },
+        settings = {
+          terraform = {
+            -- Enable experimental features
+            experimentalFeatures = {
+              validateOnSave = true,
+              prefillRequiredFields = true,
+            },
+          },
         },
       })
 

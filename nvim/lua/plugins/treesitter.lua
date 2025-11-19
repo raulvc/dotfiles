@@ -142,6 +142,9 @@ return {
         "json",
         "proto",
         "bash",
+        "dockerfile",
+        "hcl",
+        "terraform",
       }
 
       vim.defer_fn(function()
