@@ -15,6 +15,11 @@ local options = {
     json = { "fixjson" },
     yaml = { "yamlfmt" },
     yml = { "yamlfmt" },
+    dockerfile = { "hadolint" },
+    proto = { "buf" },
+    terraform = { "terraform_fmt" },
+    tf = { "terraform_fmt" },
+    hcl = { "terraform_fmt" },
   },
 
   formatters = {
@@ -45,6 +50,22 @@ local options = {
         "3",
         "--trailing-comma",
       },
+    },
+    -- Hadolint for Dockerfile linting/formatting
+    hadolint = {
+      command = "hadolint",
+      args = { "--no-color", "$FILENAME" },
+    },
+    -- Buf for Protocol Buffers formatting
+    buf = {
+      command = "buf",
+      args = { "format", "-w", "$FILENAME" },
+    },
+    -- Terraform fmt for HCL files
+    terraform_fmt = {
+      command = "terraform",
+      args = { "fmt", "-" },
+      stdin = true,
     },
   },
 

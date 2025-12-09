@@ -152,6 +152,20 @@ return {
       end, 1000)
       require("nvim-treesitter").update()
 
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "*.tpl",
+        callback = function()
+          vim.bo.filetype = "terraform"
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = { ".pgpass", "pgpass" },
+        callback = function()
+          vim.bo.filetype = "conf"
+        end,
+      })
+
       -- auto-start highlights & indentation
       vim.api.nvim_create_autocmd("FileType", {
         desc = "User: enable treesitter highlighting",
@@ -159,8 +173,16 @@ return {
           -- highlights
           local hasStarted = pcall(vim.treesitter.start) -- errors for filetypes with no parser
 
-          -- indent
-          local noIndent = { "json", "yaml", "yml" } -- Add filetypes that should use default indentation
+          local noIndent = {
+            "json",
+            "yaml",
+            "yml",
+            "dockerfile",
+            "proto",
+            "terraform",
+            "tf",
+            "hcl",
+          } -- Add filetypes that should use default indentation
 
           if hasStarted and not vim.list_contains(noIndent, ctx.match) then
             vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"

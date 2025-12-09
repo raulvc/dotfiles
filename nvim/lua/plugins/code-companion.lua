@@ -8,12 +8,6 @@ return {
       "nvim-treesitter/nvim-treesitter",
       "ravitemer/codecompanion-history.nvim",
       "nvim-telescope/telescope.nvim",
-      {
-        "Davidyz/VectorCode",
-        version = "*", -- optional, depending on whether you're on nightly or release
-        dependencies = { "nvim-lua/plenary.nvim" },
-        cmd = "VectorCode", -- if you're lazy-loading VectorCode
-      },
     },
     config = function()
       require("codecompanion").setup {
@@ -100,7 +94,8 @@ return {
         extensions = {
           history = {
             enabled = true,
-            expiration_days = 90,
+            expiration_days = 30,
+            max_entries = 50,
             opts = {
               summary = {
                 generation_opts = {
@@ -111,13 +106,6 @@ return {
               title_generation_opts = {
                 adapter = "copilot",
                 model = "gpt-4o",
-              },
-              memory = {
-                tool_opts = {
-                  -- Default number of memories to retrieve
-                  default_num = 30,
-                },
-                index_on_startup = vim.env.KITTY_SCROLLBACK_NVIM == nil,
               },
             },
           },
