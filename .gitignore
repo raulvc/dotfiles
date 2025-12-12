@@ -12,3 +12,5 @@ nvim/lazy-lock.json
 !atuin/*
 !kitty
 !kitty/*
+!git
+!git/*
