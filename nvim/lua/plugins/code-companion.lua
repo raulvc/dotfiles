@@ -37,6 +37,16 @@ return {
             adapter = "genplat",
             slash_commands = {
               ["buffer"] = {
+                opts = {
+                  provider = "telescope",
+                  -- Use frecency picker for buffer selection
+                  telescope_picker = function()
+                    require("telescope").extensions.frecency.frecency {
+                      workspace = "CWD",
+                      prompt_title = "Select Buffer for CodeCompanion",
+                    }
+                  end,
+                },
                 keymaps = {
                   modes = {
                     i = "<C-b>",
@@ -67,10 +77,10 @@ return {
               },
               schema = {
                 model = {
-                  default = "claude-sonnet-4-5-20250929-v1.0",
+                  default = "claude-opus-4-5-20251101-v1",
                   choices = {
                     "claude-sonnet-4-5-20250929-v1.0",
-                    "claude-opus-4-1-20250805-v1.0",
+                    "claude-opus-4-5-20251101-v1",
                   },
                 },
                 temperature = {

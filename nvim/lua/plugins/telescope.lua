@@ -10,64 +10,69 @@ return {
       "nvim-telescope/telescope-ui-select.nvim",
       "nvim-tree/nvim-web-devicons",
       "debugloop/telescope-undo.nvim",
+      "nvim-telescope/telescope-frecency.nvim",
+      "kkharji/sqlite.lua",
     },
     lazy = false,
     config = function()
       local actions = require "telescope.actions"
       local action_state = require "telescope.actions.state"
 
-      -- Define test file patterns
-      local test_patterns = {
-        "test",
-        "_test",
-        ".test",
-        "tests",
-        "Test",
-        "_Test",
-        ".Test",
-        "Tests",
-        "mock",
-        "Mock",
-        "mocks",
-        "Mocks",
-        ".mock",
-        "_mock",
-      }
+      -- Pre-compile patterns for better performance
+      local test_pattern_compiled = vim.regex [[\v(test|spec|mock|Test|Spec|Mock)]]
 
-      -- Function to check if a file is a test file
+      -- Faster test file check using single regex
       local function is_test_file(filename)
         if not filename then
           return false
         end
-        local basename = vim.fn.fnamemodify(filename, ":t")
-        local path = vim.fn.fnamemodify(filename, ":h")
-
-        for _, pattern in ipairs(test_patterns) do
-          if basename:match(pattern) or path:match(pattern) then
-            return true
-          end
-        end
-        return false
+        return test_pattern_compiled:match_str(filename) ~= nil
       end
 
-      -- Custom entry maker for live_grep to colorize test files
+      -- Cached highlight for test files
+      local test_file_hl = "TelescopeTestFile"
+
+      -- Optimized entry maker for live_grep - minimal allocation version
       local function make_entry_with_test_highlight()
         local make_entry = require "telescope.make_entry"
         local original_maker = make_entry.gen_from_vimgrep()
 
         return function(entry)
           local made = original_maker(entry)
-          if made and is_test_file(made.filename) then
-            made.display = function(entry_display)
-              local display = original_maker(entry_display).display(entry_display)
-              -- Add green highlighting for test files
-              return display, { { { 1, #display }, "TelescopeTestFile" } }
+          if not made or not made.filename then
+            return made
+          end
+
+          -- Quick test: skip regex if no potential match characters
+          local fname = made.filename
+          if
+            not (
+              fname:find("test", 1, true)
+              or fname:find("spec", 1, true)
+              or fname:find("mock", 1, true)
+              or fname:find("Test", 1, true)
+              or fname:find("Spec", 1, true)
+              or fname:find("Mock", 1, true)
+            )
+          then
+            return made
+          end
+
+          if test_pattern_compiled:match_str(fname) then
+            local original_display = made.display
+            if type(original_display) == "function" then
+              made.display = function(e)
+                local text = original_display(e)
+                return text, { { { 1, #text }, "TelescopeTestFile" } }
+              end
             end
           end
+
           return made
         end
       end
 
+      -- Optimized file entry maker
       local function make_file_entry_with_test_highlight()
         local make_entry = require "telescope.make_entry"
         local original_maker = make_entry.gen_from_file()
@@ -80,9 +85,16 @@ return {
 
           if is_test_file(made.value) then
             local original_display = made.display
-            made.display = function(entry_display)
-              local display = original_display(entry_display)
-              return display, { { { 1, #display }, "TelescopeTestFile" } }
+            local is_callable = type(original_display) == "function"
+
+            made.display = function(e)
+              local display_text
+              if is_callable then
+                display_text = original_display(e)
+              else
+                display_text = original_display
+              end
+              return display_text, { { { 1, #display_text }, test_file_hl } }
             end
           end
 
@@ -90,17 +102,29 @@ return {
         end
       end
 
+      -- Optimized LSP entry maker
       local function make_lsp_entry_with_test_highlight()
         local make_entry = require "telescope.make_entry"
         local original_maker = make_entry.gen_from_quickfix()
 
         return function(entry)
           local made = original_maker(entry)
-          if made and is_test_file(made.filename) then
-            made.display = function(entry_display)
-              local display = original_maker(entry_display).display(entry_display)
-              -- Add green highlighting for test files
-              return display, { { { 1, #display }, "TelescopeTestFile" } }
+          if not made then
+            return nil
+          end
+
+          if is_test_file(made.filename) then
+            local original_display = made.display
+            local is_callable = type(original_display) == "function"
+
+            made.display = function(e)
+              local display_text
+              if is_callable then
+                display_text = original_display(e)
+              else
+                display_text = original_display
+              end
+              return display_text, { { { 1, #display_text }, test_file_hl } }
             end
           end
           return made
@@ -197,96 +221,91 @@ return {
         end)
       end
 
+      -- Optimized tree entry maker with pre-cached values
       local function make_tree_entry_for_files()
         local devicons = require "nvim-web-devicons"
         local make_entry = require "telescope.make_entry"
-
-        -- Get the base maker to use its structure
         local base_maker = make_entry.gen_from_file {}
 
+        -- Pre-compile patterns
+        local test_pat = vim.regex [[\v(test|spec|mock)]]
+        local config_pat = vim.regex [[\v\.(json|ya?ml|toml)$]]
+        local go_pat = vim.regex [[\.go$]]
+        local doc_pat = vim.regex [[\v\.(md|txt)$]]
+
+        -- Cache indent strings to avoid repeated string.rep calls
+        local indent_cache = {}
+        local function get_indent(depth)
+          if depth == 0 then
+            return ""
+          end
+          if not indent_cache[depth] then
+            indent_cache[depth] = string.rep("  ", depth) .. "└─ "
+          end
+          return indent_cache[depth]
+        end
+
         return function(entry)
-          -- First, create the base entry with all standard fields
           local base_entry = base_maker(entry)
           if not base_entry then
             return nil
           end
 
-          -- Get the file path
           local path = base_entry.value
           local relative = vim.fn.fnamemodify(path, ":.")
-
-          -- Split path into segments for tree structure
           local segments = vim.split(relative, "/", { plain = true })
           local depth = #segments - 1
           local filename = segments[#segments]
 
-          -- Get directory path (everything except filename)
-          local dir = ""
-          if depth > 0 then
-            dir = table.concat(segments, "/", 1, #segments - 1) .. "/"
-          end
+          -- Build directory path
+          local dir = depth > 0 and (table.concat(segments, "/", 1, depth) .. "/") or ""
 
-          -- Create tree indentation
-          local tree_indent = ""
-          if depth > 0 then
-            tree_indent = string.rep("  ", depth) .. "└─ "
-          end
-
-          -- Get file icon and color
+          local tree_indent = get_indent(depth)
           local icon, icon_hl = devicons.get_icon(filename, nil, { default = true })
           icon = icon or "󰈚"
           icon_hl = icon_hl or "DevIconDefault"
 
-          -- Determine filename highlight based on type
-          local filename_hl = "TelescopeResultsIdentifier"
-
-          -- Test files - green
-          if filename:match "test" or filename:match "spec" or filename:match "mock" then
+          -- Determine highlight using pre-compiled patterns
+          local filename_hl
+          if test_pat:match_str(filename) then
             filename_hl = "TelescopeTestFile"
-          -- Config files - yellow
-          elseif filename:match "%.json$" or filename:match "%.ya?ml$" or filename:match "%.toml$" then
+          elseif config_pat:match_str(filename) then
             filename_hl = "String"
-          -- Go files - blue
-          elseif filename:match "%.go$" then
+          elseif go_pat:match_str(filename) then
             filename_hl = "Function"
-          -- Documentation - special
-          elseif filename:match "%.md$" or filename:match "%.txt$" then
+          elseif doc_pat:match_str(filename) then
             filename_hl = "Special"
+          else
+            filename_hl = "TelescopeResultsIdentifier"
           end
 
-          -- Pre-build the display string and highlights
+          -- Pre-compute lengths
+          local indent_len = #tree_indent
+          local icon_len = #icon
+          local dir_len = #dir
+
           local display_str = tree_indent .. icon .. " " .. dir .. filename
+
+          -- Build highlights array once
           local highlights = {}
+          local pos = 0
 
-          -- Highlight tree indent
-          if #tree_indent > 0 then
-            table.insert(highlights, {
-              { 0, #tree_indent },
-              "TelescopeTreeIndent",
-            })
+          if indent_len > 0 then
+            highlights[#highlights + 1] = { { pos, indent_len }, "TelescopeTreeIndent" }
           end
+          pos = indent_len
 
-          -- Highlight icon
-          table.insert(highlights, {
-            { #tree_indent, #tree_indent + #icon },
-            icon_hl,
-          })
+          highlights[#highlights + 1] = { { pos, pos + icon_len }, icon_hl }
+          pos = pos + icon_len + 1
 
-          -- Highlight directory path (dimmed)
-          if #dir > 0 then
-            table.insert(highlights, {
-              { #tree_indent + #icon + 1, #tree_indent + #icon + 1 + #dir },
-              "Comment",
-            })
+          if dir_len > 0 then
+            highlights[#highlights + 1] = { { pos, pos + dir_len }, "Comment" }
           end
+          pos = pos + dir_len
 
-          -- Highlight filename based on type
-          table.insert(highlights, {
-            { #tree_indent + #icon + 1 + #dir, #display_str },
-            filename_hl,
-          })
+          highlights[#highlights + 1] = { { pos, #display_str }, filename_hl }
 
-          -- Override only the display function, keep all other base_entry fields
+          -- Return pre-computed display
           base_entry.display = function()
             return display_str, highlights
           end
@@ -364,6 +383,42 @@ return {
         end
       end
 
+      -- Toggle state for no-ignore
+      local grep_no_ignore = false
+
+      local function toggle_no_ignore(prompt_bufnr)
+        local picker = action_state.get_current_picker(prompt_bufnr)
+        local prompt = picker:_get_prompt()
+
+        actions.close(prompt_bufnr)
+
+        grep_no_ignore = not grep_no_ignore
+
+        local args = {
+          "rg",
+          "--color=never",
+          "--no-heading",
+          "--with-filename",
+          "--line-number",
+          "--column",
+          "--smart-case",
+          "--hidden",
+          "--glob=!.git/",
+        }
+
+        if grep_no_ignore then
+          table.insert(args, "--no-ignore")
+        end
+
+        vim.schedule(function()
+          require("telescope.builtin").live_grep {
+            default_text = prompt,
+            vimgrep_arguments = args,
+            prompt_title = grep_no_ignore and "Live Grep (incl. ignored)" or "Live Grep",
+          }
+        end)
+      end
+
       require("telescope").setup {
         defaults = {
           prompt_prefix = "󰭎 ",
@@ -381,7 +436,6 @@ return {
             "--column",
             "--smart-case",
             "--hidden",
-            "--no-ignore", -- Add this to show files in .gitignore
             "--glob=!.git/", -- Exclude .git directory for performance
           },
           file_ignore_patterns = { "^.git/" }, -- Exclude .git directory
@@ -405,10 +459,12 @@ return {
               ["q"] = actions.close,
               ["<Esc>"] = actions.close,
               ["<CR>"] = smart_open_file,
+              ["<C-h>"] = toggle_no_ignore, -- Toggle hidden/ignored files
             },
             i = {
               ["<Esc>"] = actions.close,
               ["<CR>"] = smart_open_file,
+              ["<C-h>"] = toggle_no_ignore, -- Toggle hidden/ignored files
             },
           },
           file_previewer = with_preview_winbar(previewers.vim_buffer_cat.new),
@@ -610,6 +666,8 @@ return {
 
       require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"
+      require("telescope").load_extension "frecency"
+
       if not vim.env.KITTY_SCROLLBACK_NVIM then
         require("telescope").load_extension "noice"
       end

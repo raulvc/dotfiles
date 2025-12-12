@@ -503,7 +503,32 @@ return {
     "theHamsta/nvim-dap-virtual-text",
     dependencies = { "mfussenegger/nvim-dap", "nvim-treesitter/nvim-treesitter" },
     config = function()
-      require("nvim-dap-virtual-text").setup {}
+      require("nvim-dap-virtual-text").setup {
+        enabled = true,
+        enabled_commands = true,
+        highlight_changed_variables = true,
+        highlight_new_as_changed = false,
+        show_stop_reason = true,
+        commented = false,
+        only_first_definition = true, -- Only show virtual text on first definition
+        all_references = false, -- Don't show on all references
+
+        -- Display options
+        virt_text_pos = "eol", -- Position: 'eol' | 'overlay' | 'right_align'
+        all_frames = false, -- Show virtual text for all stack frames
+
+        -- Filter which variables to show
+        virt_text_win_col = nil, -- Position the virtual text at a fixed column
+
+        -- Format the virtual text
+        display_callback = function(variable, buf, stackframe, node, options)
+          -- Limit the length of displayed values
+          if #variable.value > 50 then
+            return variable.name .. " = " .. string.sub(variable.value, 1, 47) .. "..."
+          end
+          return variable.name .. " = " .. variable.value
+        end,
+      }
     end,
   },
 
@@ -516,6 +541,11 @@ return {
     },
     opts = {
       force_buffers = true,
+      icons = {
+        expanded = "▼",
+        collapsed = "▶",
+        current_frame = "→",
+      },
       layouts = {
         {
           elements = {
@@ -595,22 +625,20 @@ return {
       dap.adapters.go = function(callback, config)
         debug_state.is_running = true
 
-        -- Add a small delay on first run to ensure clean state
-        local delay = DEBUG_TERMINAL.job_id and 0 or 100 -- 100ms delay only on first run
-
         local port = config.port or get_unused_port()
         local term_buf, term_win = create_debug_terminal "Go Debug Output"
+
+        local pino_pretty_path = vim.fn.expand "/usr/bin/pino-pretty"
+        local dlv_path = vim.fn.expand "~/go/bin/dlv"
 
         DEBUG_TERMINAL.job_id = vim.fn.jobstart({
           "bash",
           "-c",
-          "/home/raul/go/bin/dlv dap -l 127.0.0.1:"
-            .. port
-            .. ' 2>&1 | while IFS= read -r line; do echo "$line" | /home/raul/.nvm/versions/node/v20.11.0/bin/pino-pretty -c . 2>/dev/null || echo "$line"; done',
+          string.format("%s dap -l 127.0.0.1:%d 2>&1 | %s -c || cat", dlv_path, port, pino_pretty_path),
         }, {
           term = true,
           buffer = term_buf,
-          cwd = config.cwd, -- Set working directory
+          cwd = config.cwd,
 
           on_stdout = function()
             auto_scroll_terminal()
@@ -633,7 +661,7 @@ return {
 
         vim.defer_fn(function()
           callback { type = "server", host = "127.0.0.1", port = port }
-        end, 1000) -- Increase to 1 second to ensure delve is ready
+        end, 1000)
       end
 
       dap.listeners.after.event_initialized["dapui_config"] = function()
@@ -672,9 +700,17 @@ return {
       dap.configurations.go = {
         {
           type = "go",
-          name = "Debug",
+          name = "Debug current package",
           request = "launch",
-          program = "${file}",
+          mode = "debug",
+          program = "${workspaceFolder}",
+        },
+        {
+          type = "go",
+          name = "Debug current directory",
+          request = "launch",
+          mode = "debug",
+          program = "${fileDirname}",
         },
       }
 
@@ -754,24 +790,6 @@ return {
           require("dapui").toggle {}
         end,
         desc = "[d]ap [u]i",
-      },
-      {
-        "<leader>dev",
-        function()
-          -- Evaluate variable as string
-          local word = vim.fn.expand "<cword>"
-          require("dapui").eval("string(" .. word .. ")")
-        end,
-        desc = "[d]ap [e]val as string",
-      },
-      {
-        "<leader>deb",
-        function()
-          -- Evaluate byte array as string
-          local word = vim.fn.expand "<cword>"
-          require("dapui").eval('fmt.Sprintf("%s", ' .. word .. ")")
-        end,
-        desc = "[d]ap [e]val [b]ytes as string",
       },
     },
   },

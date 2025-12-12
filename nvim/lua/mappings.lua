@@ -52,14 +52,11 @@ end
 
 map("n", "<M-S-w>", smart_close, { desc = "Close buffer" })
 
----- Opens last closed buffer
 vim.keymap.set("n", "<C-Tab>", function()
-  require("telescope.builtin").oldfiles {
-    prompt_title = "Recently Closed",
-    only_cwd = true,
-    cwd_only = true,
+  require("telescope").extensions.frecency.frecency {
+    workspace = "CWD",
   }
-end, { desc = "Recently closed files" })
+end, { desc = "Recent files (frecency)" })
 
 -- ---- Window resizing (matching zellij resize)
 -- map("n", "<M-j>", ":resize +2<CR>", { desc = "Resize up (Alt+Shift+Up)" })
@@ -451,92 +448,5 @@ end, { desc = "Move to end of line (exclude line break)" })
 
 map("n", "<leader>q", ":NvimTreeToggle<CR>", { desc = "Toggle NvimTree" })
 
-local function format_after_paste(paste_cmd)
-  return function()
-    -- Store cursor position before paste
-    local cursor_before = vim.api.nvim_win_get_cursor(0)
-
-    -- Execute paste
-    vim.cmd("normal! " .. paste_cmd)
-
-    -- Get the range of pasted text
-    local cursor_after = vim.api.nvim_win_get_cursor(0)
-    local start_line = math.min(cursor_before[1], cursor_after[1])
-    local end_line = math.max(cursor_before[1], cursor_after[1])
-
-    -- Format only the pasted region with a longer delay
-    vim.defer_fn(function()
-      require("conform").format {
-        async = true,
-        lsp_fallback = true,
-        range = {
-          start = { start_line, 0 },
-          ["end"] = { end_line, 0 },
-        },
-      }
-    end, 100)
-  end
-end
-
--- Normal mode paste with formatting
-map("n", "p", format_after_paste "p", { desc = "Paste after cursor and format" })
-map("n", "P", format_after_paste "P", { desc = "Paste before cursor and format" })
-
--- Visual mode paste with formatting
-map("v", "p", function()
-  -- Store selection range
-  local start_pos = vim.fn.getpos "'<"
-  local end_pos = vim.fn.getpos "'>"
-
-  -- Paste over selection
-  vim.cmd 'normal! gv"_dP'
-
-  -- Format the affected region
-  vim.defer_fn(function()
-    require("conform").format {
-      async = true,
-      lsp_fallback = true,
-      range = {
-        start = { start_pos[2], 0 },
-        ["end"] = { end_pos[2], 0 },
-      },
-    }
-  end, 100)
-end, { desc = "Paste over selection and format" })
-
--- Insert mode paste with formatting (Ctrl+Shift+V)
-map("i", "<C-S-v>", function()
-  -- Exit insert mode temporarily
-  vim.cmd "stopinsert"
-
-  -- Get cursor position before paste
-  local cursor_before = vim.api.nvim_win_get_cursor(0)
-
-  -- Paste from clipboard
-  vim.cmd 'normal! "+p'
-
-  -- Get cursor position after paste
-  local cursor_after = vim.api.nvim_win_get_cursor(0)
-
-  -- Format the pasted region
-  vim.defer_fn(function()
-    local start_line = math.min(cursor_before[1], cursor_after[1])
-    local end_line = math.max(cursor_before[1], cursor_after[1])
-
-    require("conform").format {
-      async = true,
-      lsp_fallback = true,
-      range = {
-        start = { start_line, 0 },
-        ["end"] = { end_line, 0 },
-      },
-    }
-
-    -- Return to insert mode at end of paste
-    vim.schedule(function()
-      vim.cmd "normal! `]"
-      vim.cmd "startinsert"
-      vim.cmd "normal! l"
-    end)
-  end, 100)
-end, { desc = "Paste from clipboard and format" })
+-- Make ZZ save all and quit (like :wqa)
+map("n", "ZZ", ":wqa<CR>", { desc = "Save all buffers and quit Neovim" })
