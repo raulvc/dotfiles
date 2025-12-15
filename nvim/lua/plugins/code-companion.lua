@@ -3,6 +3,7 @@ return {
     "olimorris/codecompanion.nvim",
     lazy = false,
     opts = {},
+    branch = "main",
     dependencies = {
       "nvim-lua/plenary.nvim",
       "nvim-treesitter/nvim-treesitter",
@@ -18,28 +19,27 @@ return {
             width = 95,
             height = 10,
             prompt = "Prompt ",
-            provider = "telescope", -- or "default"
+            provider = "telescope",
           },
           chat = {
             window = {
-              layout = "vertical", -- "vertical", "horizontal", "float", "buffer"
-              width = 0.45, -- % of the editor width
-              height = 0.8, -- % of the editor height
-              relative = "editor", -- "editor", "win"
+              layout = "vertical",
+              width = 0.45,
+              height = 0.8,
+              relative = "editor",
             },
-            show_token_count = true, -- Display token usage
+            show_token_count = true,
           },
         },
 
-        strategies = {
+        -- ⚠️ FIX #1: Change 'strategies' to 'interactions'
+        interactions = {
           chat = {
-            -- adapter = "copilot",
             adapter = "genplat",
             slash_commands = {
               ["buffer"] = {
                 opts = {
                   provider = "telescope",
-                  -- Use frecency picker for buffer selection
                   telescope_picker = function()
                     require("telescope").extensions.frecency.frecency {
                       workspace = "CWD",
@@ -57,50 +57,54 @@ return {
             },
           },
         },
+
         adapters = {
-          copilot = function()
-            return require("codecompanion.adapters").extend("copilot", {
-              schema = {
-                model = {
-                  default = "claude-sonnet-4.5", -- Start with the most powerful model
+
+          http = {
+            opts = {
+              show_presets = false, -- 🔑 This hides all built-in adapters
+            },
+
+            genplat = function()
+              return require("codecompanion.adapters").extend("openai", {
+                env = {
+                  api_key = "REQUESTER_TOKEN",
+                  url = "GENPLAT_URL",
+                  chat_url = "/v1/chat/completions",
+                  models_endpoint = "/v1/models",
                 },
-              },
-            })
-          end,
-          genplat = function()
-            return require("codecompanion.adapters").extend("openai", {
-              env = {
-                api_key = "REQUESTER_TOKEN",
-                url = "GENPLAT_URL",
-                chat_url = "/v1/chat/completions",
-                models_endpoint = "/v1/models",
-              },
-              schema = {
-                model = {
-                  default = "claude-opus-4-5-20251101-v1",
-                  choices = {
-                    "claude-sonnet-4-5-20250929-v1.0",
-                    "claude-opus-4-5-20251101-v1",
+                schema = {
+                  model = {
+                    default = "claude-opus-4-5-20251101-v1",
+                    choices = {
+                      "claude-sonnet-4-5-20250929-v1.0",
+                      "claude-opus-4-5-20251101-v1",
+                    },
+                  },
+                  temperature = {
+                    default = 0,
                   },
                 },
-                temperature = {
-                  default = 0, -- Deterministic output, best for coding
+                url = "${url}${chat_url}",
+                headers = {
+                  ["Authorization"] = "Bearer ${api_key}",
+                  ["Content-Type"] = "application/json",
                 },
-                top_p = {
-                  default = 1,
-                  condition = function(self)
-                    return false -- Never include top_p
-                  end,
+              })
+            end,
+
+            copilot = function()
+              return require("codecompanion.adapters").extend("copilot", {
+                schema = {
+                  model = {
+                    default = "claude-sonnet-4.5",
+                  },
                 },
-              },
-              url = "${url}${chat_url}",
-              headers = {
-                ["Authorization"] = "Bearer ${api_key}",
-                ["Content-Type"] = "application/json",
-              },
-            })
-          end,
+              })
+            end,
+          },
         },
+
         extensions = {
           history = {
             enabled = true,
