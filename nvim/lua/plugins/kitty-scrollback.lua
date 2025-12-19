@@ -26,7 +26,7 @@ return {
 
   -- Disable DAP (debugger) plugins
   { "nvim-dap", enabled = not is_kitty_scrollback },
-  { "nvim-dap-ui", enabled = not is_kitty_scrollback },
+  { "nvim-dap-view", enabled = not is_kitty_scrollback },
   { "nvim-dap-virtual-text", enabled = not is_kitty_scrollback },
   { "nvim-dap-repl-highlights", enabled = not is_kitty_scrollback },
   { "nvim-dap-go", enabled = not is_kitty_scrollback },
@@ -84,6 +84,9 @@ return {
             status_window = {
               enabled = true,
               style_simple = false,
+            },
+            callbacks = {
+              after_ready = function() end, -- Explicitly override to disable auto-search
             },
           }
         end,
