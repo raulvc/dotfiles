@@ -63,6 +63,8 @@ return {
           http = {
             opts = {
               show_presets = false, -- 🔑 This hides all built-in adapters
+              show_model_choices = true,
+              show_defaults = false,
             },
 
             genplat = function()
@@ -83,6 +85,12 @@ return {
                   },
                   temperature = {
                     default = 0,
+                  },
+                  top_p = {
+                    default = 1,
+                    enabled = function(self)
+                      return false
+                    end,
                   },
                 },
                 url = "${url}${chat_url}",

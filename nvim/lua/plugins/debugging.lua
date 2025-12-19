@@ -263,7 +263,6 @@ return {
         function()
           require("dap").toggle_breakpoint()
         end,
-
         desc = "toggle [d]ebug [b]reakpoint",
       },
       {
@@ -271,16 +270,13 @@ return {
         function()
           local dap = require "dap"
 
-          -- Create floating buffer
           local buf = vim.api.nvim_create_buf(false, true)
           local width = math.floor(vim.o.columns * 0.6)
           local height = 1
 
-          -- Calculate center position
           local row = math.floor((vim.o.lines - height) / 2)
           local col = math.floor((vim.o.columns - width) / 2)
 
-          -- Open floating window
           local win = vim.api.nvim_open_win(buf, true, {
             relative = "editor",
             width = width,
@@ -293,19 +289,15 @@ return {
             title_pos = "center",
           })
 
-          -- Set buffer options for REPL-like behavior
           vim.bo[buf].buftype = "prompt"
-          vim.bo[buf].filetype = "dap-repl" -- This enables DAP autocomplete!
+          vim.bo[buf].filetype = "dap-repl"
 
-          -- Set the prompt
           vim.fn.prompt_setprompt(buf, "condition> ")
 
-          -- Handle Ctrl+Enter to set breakpoint
           vim.keymap.set("i", "<C-CR>", function()
             local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
             local condition = lines[1]:gsub("^condition> ", ""):gsub("^%s+", ""):gsub("%s+$", "")
 
-            -- Close the floating window
             vim.api.nvim_win_close(win, true)
 
             if condition ~= "" then
@@ -314,17 +306,14 @@ return {
             end
           end, { buffer = buf })
 
-          -- Handle Escape to cancel
           vim.keymap.set({ "n", "i" }, "<Esc>", function()
             vim.api.nvim_win_close(win, true)
           end, { buffer = buf })
 
-          -- Start in insert mode
           vim.cmd "startinsert"
         end,
         desc = "[d]ebug conditional [B]reakpoint",
       },
-
       {
         "<leader>dc",
         function()
@@ -332,7 +321,6 @@ return {
         end,
         desc = "[d]ebug [c]ontinue (start here)",
       },
-
       {
         "<F9>",
         function()
@@ -340,7 +328,6 @@ return {
         end,
         desc = "[d]ebug [c]ontinue (start here)",
       },
-
       {
         "<leader>dC",
         function()
@@ -443,7 +430,7 @@ return {
         "<leader>dt",
         function()
           cleanup_debug_terminal()
-          require("dapui").close()
+          require("dap-view").close(true)
           require("dap").terminate()
         end,
         desc = "[d]ebug [t]erminate",
@@ -451,9 +438,16 @@ return {
       {
         "<leader>dw",
         function()
-          require("dap.ui.widgets").hover()
+          require("dap-view").add_expr()
         end,
-        desc = "[d]ebug [w]idgets",
+        desc = "[d]ebug add [w]atch",
+      },
+      {
+        "<leader>du",
+        function()
+          require("dap-view").toggle()
+        end,
+        desc = "[d]ap [u]i toggle",
       },
     },
     config = function()
@@ -475,7 +469,6 @@ return {
         linehl = "",
         numhl = "DapBreakpointRejected",
       })
-      -- 🎯 Enhanced stopped line configuration
       vim.fn.sign_define("DapStopped", {
         text = "👉",
         texthl = "DapStopped",
@@ -489,14 +482,11 @@ return {
         numhl = "",
       })
 
-      -- 🌈 Enhanced highlight groups for better visibility
       vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#e51400" })
       vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#f1c40f" })
       vim.api.nvim_set_hl(0, "DapBreakpointRejected", { fg = "#ec5f67" })
-
-      -- 🎯 Critical: Stopped line highlighting
       vim.api.nvim_set_hl(0, "DapStopped", { fg = "#00ff00", bold = true })
-      vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#2d4635", fg = "#ffffff" }) -- Green background
+      vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#2d4635", fg = "#ffffff" })
     end,
   },
   {
@@ -510,19 +500,12 @@ return {
         highlight_new_as_changed = false,
         show_stop_reason = true,
         commented = false,
-        only_first_definition = true, -- Only show virtual text on first definition
-        all_references = false, -- Don't show on all references
-
-        -- Display options
-        virt_text_pos = "eol", -- Position: 'eol' | 'overlay' | 'right_align'
-        all_frames = false, -- Show virtual text for all stack frames
-
-        -- Filter which variables to show
-        virt_text_win_col = nil, -- Position the virtual text at a fixed column
-
-        -- Format the virtual text
+        only_first_definition = true,
+        all_references = false,
+        virt_text_pos = "eol",
+        all_frames = false,
+        virt_text_win_col = nil,
         display_callback = function(variable, buf, stackframe, node, options)
-          -- Limit the length of displayed values
           if #variable.value > 50 then
             return variable.name .. " = " .. string.sub(variable.value, 1, 47) .. "..."
           end
@@ -533,93 +516,56 @@ return {
   },
 
   {
-    "rcarriga/nvim-dap-ui",
+    "igorlfs/nvim-dap-view",
     event = "VeryLazy",
     dependencies = {
-      "nvim-neotest/nvim-nio",
       "mfussenegger/nvim-dap",
     },
     opts = {
-      force_buffers = true,
-      icons = {
-        expanded = "▼",
-        collapsed = "▶",
-        current_frame = "→",
-      },
-      layouts = {
-        {
-          elements = {
-            { id = "stacks", size = 0.25 },
-            { id = "scopes", size = 0.35 },
-            { id = "repl", size = 0.25 },
-            { id = "watches", size = 0.15 },
+      winbar = {
+        show = true,
+        sections = { "watches", "scopes", "exceptions", "breakpoints", "threads", "repl", "console" },
+        default_section = "scopes",
+        controls = {
+          enabled = true,
+          position = "right",
+          buttons = {
+            "play",
+            "step_into",
+            "step_over",
+            "step_out",
+            "step_back",
+            "run_last",
+            "terminate",
+            "disconnect",
           },
-          position = "left",
-          size = 40,
         },
       },
-      render = {
-        indent = 1,
-        max_value_lines = 3,
-        sort_variables = function(a, b)
-          -- Don't sort if either is a slice/array element (contains brackets)
-          local a_is_indexed = a.name:match "%[%d+%]"
-          local b_is_indexed = b.name:match "%[%d+%]"
-
-          if a_is_indexed and b_is_indexed then
-            -- Extract numeric indices and compare numerically
-            local a_idx = tonumber(a.name:match "%[(%d+)%]")
-            local b_idx = tonumber(b.name:match "%[(%d+)%]")
-            if a_idx and b_idx then
-              return a_idx < b_idx
-            end
+      windows = {
+        height = 0.30,
+        position = "below",
+        terminal = {
+          width = 0.5,
+          position = "left",
+          hide = { "delve" }, -- Hide built-in terminal for delve since you have custom one
+          start_hidden = true,
+        },
+        anchor = function()
+          -- Anchor to your custom debug terminal
+          if DEBUG_TERMINAL.win and vim.api.nvim_win_is_valid(DEBUG_TERMINAL.win) then
+            return DEBUG_TERMINAL.win
           end
-
-          -- Sort by scope first
-          if a.scope ~= b.scope then
-            local order = { ["Locals"] = 1, ["Arguments"] = 2, ["Globals"] = 3 }
-            return (order[a.scope] or 99) < (order[b.scope] or 99)
-          end
-
-          -- Alphabetical for non-indexed variables
-          return a.name < b.name
         end,
       },
 
-      element_mappings = {
-        scopes = {
-          edit = "e",
-          expand = { "<CR>", "<2-LeftMouse>" },
-          repl = "r",
-        },
-        watches = {
-          edit = "e",
-          expand = { "<CR>", "<2-LeftMouse>" },
-          remove = "d",
-          repl = "r",
-        },
-      },
-      expand_lines = vim.fn.has "nvim-0.7" == 1,
-      mappings = {
-        expand = { "<CR>", "<2-LeftMouse>" },
-        open = "o",
-        remove = "d",
-        edit = "e",
-        repl = "r",
-        toggle = "t",
-      },
-      floating = {
-        max_height = nil,
-        max_width = nil,
-        border = "single",
-        mappings = {
-          close = { "q", "<Esc>" },
-        },
-      },
+      switchbuf = "usetab,uselast",
+      auto_toggle = true,
     },
     config = function(_, opts)
       local dap = require "dap"
-      local dapui = require "dapui"
+      local dap_view = require "dap-view"
+
+      dap_view.setup(opts)
 
       -- Go adapter using generic terminal
       dap.adapters.go = function(callback, config)
@@ -664,36 +610,26 @@ return {
         end, 1000)
       end
 
-      dap.listeners.after.event_initialized["dapui_config"] = function()
+      -- DAP event listeners for dap-view
+      dap.listeners.after.event_initialized["dap_view_config"] = function()
         vim.cmd "silent! wall"
-        local ok, err = pcall(function()
-          dapui.open()
-        end)
-        if not ok then
-          vim.notify("Failed to open DAP UI: " .. tostring(err), vim.log.levels.WARN)
-          vim.cmd "silent! wall!"
-          dapui.open()
-        end
         vim.notify("🐛 Debug session started", vim.log.levels.INFO)
       end
 
-      dap.listeners.before.event_terminated["dapui_config"] = function()
+      dap.listeners.before.event_terminated["dap_view_config"] = function()
         cleanup_debug_terminal()
-        dapui.close()
       end
 
-      dap.listeners.before.event_exited["dapui_config"] = function()
+      dap.listeners.before.event_exited["dap_view_config"] = function()
         cleanup_debug_terminal()
-        dapui.close()
       end
-
-      dapui.setup(opts)
 
       -- Fix ESC in REPL to properly exit insert mode
       vim.api.nvim_create_autocmd("FileType", {
-        pattern = "dap-repl",
+        pattern = { "dap-repl", "dap-view" },
         callback = function(ev)
           vim.keymap.set("i", "<Esc>", "<C-\\><C-n>", { buffer = ev.buf, silent = true, nowait = true })
+          vim.keymap.set("n", "q", "<C-w>q", { buffer = ev.buf, silent = true })
         end,
       })
 
@@ -733,7 +669,6 @@ return {
           return
         end
 
-        -- Wait for the adapter to start
         vim.defer_fn(function()
           callback {
             type = "server",
@@ -760,7 +695,6 @@ return {
           type = "pwa-node",
           request = "launch",
           name = "Launch Jest Tests",
-          -- trace = true, -- include debugger info
           runtimeExecutable = "node",
           runtimeArgs = {
             "./node_modules/jest/bin/jest.js",
@@ -783,14 +717,5 @@ return {
 
       dap.configurations.javascript = dap.configurations.typescript
     end,
-    keys = {
-      {
-        "<leader>du",
-        function()
-          require("dapui").toggle {}
-        end,
-        desc = "[d]ap [u]i",
-      },
-    },
   },
 }

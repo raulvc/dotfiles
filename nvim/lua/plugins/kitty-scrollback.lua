@@ -73,6 +73,21 @@ return {
             end,
           },
         },
+
+        -- Configuration for edit mode (no auto-search)
+        ksb_builtin_edit = function()
+          return {
+            paste_window = {
+              yank_register_enabled = true,
+              yank_register = "+",
+            },
+            status_window = {
+              enabled = true,
+              style_simple = false,
+            },
+          }
+        end,
+
         -- Configuration for fzf search
         ksb_builtin_last_cmd_output = function()
           return {
