@@ -50,7 +50,7 @@ return {
     config = function()
       require("kitty-scrollback").setup {
         {
-          -- Default configuration for all windows
+          -- Default configuration (edit mode - no auto-search)
           paste_window = {
             yank_register_enabled = true,
             yank_register = "+",
@@ -65,17 +65,10 @@ return {
             KittyScrollbackNvimStatusWinNormal = { link = "Normal" },
             KittyScrollbackNvimPasteWinNormal = { link = "Normal" },
           },
-          callbacks = {
-            after_ready = function()
-              vim.schedule(function()
-                vim.api.nvim_feedkeys("/", "n", false) -- Start search mode
-              end)
-            end,
-          },
         },
 
-        -- Configuration for edit mode (no auto-search)
-        ksb_builtin_edit = function()
+        -- Configuration for search mode
+        ksb_builtin_search = function()
           return {
             paste_window = {
               yank_register_enabled = true,
@@ -86,7 +79,11 @@ return {
               style_simple = false,
             },
             callbacks = {
-              after_ready = function() end, -- Explicitly override to disable auto-search
+              after_ready = function()
+                vim.schedule(function()
+                  vim.api.nvim_feedkeys("/", "n", false)
+                end)
+              end,
             },
           }
         end,
@@ -98,9 +95,10 @@ return {
               yank_register_enabled = false,
             },
             callbacks = {
-              on_ready = function()
-                vim.cmd "normal! ?\\$ <CR>" -- Find last prompt
-                vim.cmd "FzfLua lines"
+              after_ready = function()
+                vim.schedule(function()
+                  vim.api.nvim_feedkeys("/", "n", false)
+                end)
               end,
             },
           }
