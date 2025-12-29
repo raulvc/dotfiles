@@ -59,10 +59,11 @@ o.splitright = true
 o.timeoutlen = 300
 o.undofile = true
 
--- Folding using treesitter
+-- ban folding ick
 opt.foldmethod = "expr"
-opt.foldexpr = "v:lua.vim.treesitter.foldexpr()" -- Changed from nvim_treesitter#foldexpr()
-vim.wo.foldenable = false
+opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+opt.foldenable = false
+opt.foldlevel = 99
 
 -- interval for writing swap file to disk, also used by gitsigns
 o.updatetime = 100
