@@ -12,5 +12,7 @@ nvim/lazy-lock.json
 !atuin/*
 !kitty
 !kitty/*
+!.psqlrc
+!.pspgconf
 !git
 !git/*

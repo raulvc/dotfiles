@@ -385,6 +385,7 @@ return {
 
       -- Toggle state for no-ignore
       local grep_no_ignore = false
+      local files_no_ignore = false
 
       local function toggle_no_ignore(prompt_bufnr)
         local picker = action_state.get_current_picker(prompt_bufnr)
@@ -415,6 +416,22 @@ return {
             default_text = prompt,
             vimgrep_arguments = args,
             prompt_title = grep_no_ignore and "Live Grep (incl. ignored)" or "Live Grep",
+          }
+        end)
+      end
+
+      local function toggle_files_no_ignore(prompt_bufnr)
+        local picker = action_state.get_current_picker(prompt_bufnr)
+        local prompt = picker:_get_prompt()
+
+        actions.close(prompt_bufnr)
+        files_no_ignore = not files_no_ignore
+
+        vim.schedule(function()
+          require("telescope.builtin").find_files {
+            default_text = prompt,
+            no_ignore = files_no_ignore,
+            prompt_title = files_no_ignore and "Find Files (incl. ignored)" or "Find Files",
           }
         end)
       end
@@ -483,6 +500,19 @@ return {
             entry_maker = make_tree_entry_for_files(),
             hidden = true,
             no_ignore = true,
+            find_command = {
+              "fd",
+              "--type",
+              "f",
+              "--strip-cwd-prefix",
+              "--hidden",
+              "--exclude",
+              ".git",
+            },
+            mappings = {
+              i = { ["<C-h>"] = toggle_files_no_ignore },
+              n = { ["<C-h>"] = toggle_files_no_ignore },
+            },
             layout_config = {
               preview_width = 0.5, -- Balanced for file browsing
             },

@@ -1,0 +1,23 @@
+\x auto
+
+-- Don't display the "helpful" message on startup.
+\set QUIET 1
+
+-- Ignore repeated commands, and commands beginning with space characters
+\set HISTCONTROL ignoreboth
+
+\set PROMPT1 '%[%033[1;32m%]%n@%/%[%033[0m%]%R%# '
+
+-- Better NULL display (default is empty string which is confusing)
+\pset null 'NULL'
+
+-- increase the number of remembered commands
+\set HISTSIZE 65535
+
+-- Use pspg as pager with colors
+\setenv PAGER 'pspg --on-sigint-exit'
+\pset pager always
+\pset border 2
+\pset linestyle unicode
+
+\unset QUIET

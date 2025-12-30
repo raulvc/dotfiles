@@ -1,0 +1,19 @@
+# Darcula-like dark theme
+theme = 22
+
+# Bold headers
+bold_labels = true
+
+# Highlight current row
+highlight_odd_rec = true
+
+# NULL styling
+nullstr_color = 1
+
+# No line numbers (cleaner look)
+line_numbers = false
+
+# Freeze header row when scrolling
+freezed_cols = 0
+
+
