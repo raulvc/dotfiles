@@ -1,0 +1,95 @@
+# dunstrc
+# @author nate zhou
+# @since 2023,2024,2025
+
+[global]
+    monitor = 0
+    follow = keyboard
+    width = (350, 550)
+    height = (0, 800)
+    origin = top-right
+    offset = (12, 10)
+    scale = 0
+    notification_limit = 30
+    indicate_hidden = yes
+    transparency = 0
+    separator_height = 2
+    padding = 12
+    horizontal_padding = 14
+    frame_width = 2
+    gap_size = 4
+    separator_color = frame
+    sort = update
+    font = JetBrainsMono Nerd Font 11
+    line_height = 4
+    markup = full
+    format = "<b>%s</b>\n%b"
+    alignment = left
+    vertical_alignment = center
+    show_age_threshold = -1
+    ellipsize = middle
+    ignore_newline = no
+    stack_duplicates = true
+    hide_duplicate_count = false
+    show_indicators = no
+    sticky_history = yes
+    history_length = 30
+    dmenu = /usr/bin/wmenu -p dunst:
+    browser = /usr/bin/qutebrowser
+    always_run_script = true
+    title = Dunst
+    class = Dunst
+    corner_radius = 8
+    corners = all
+    ignore_dbusclose = false
+    force_xwayland = false
+    force_xinerama = false
+    mouse_left_click = close_current
+    mouse_middle_click = do_action, close_current
+    mouse_right_click = context_all
+    enable_recursive_icon_lookup = true
+    icon_theme = "Adwaita, hicolor"
+    icon_position = left
+    min_icon_size = 32
+    max_icon_size = 64
+    icon_corner_radius = 4
+    enable_recursive_icon_lookup = true
+    icon_theme = "Papirus, Adwaita, hicolor"
+
+[experimental]
+    per_monitor_dpi = false
+
+[urgency_low]
+    background = "#1F1F28"
+    foreground = "#C8C093"
+    frame_color = "#54546D"
+    highlight = "#76946A"
+    timeout = 7
+
+[urgency_normal]
+    background = "#1F1F28"
+    foreground = "#DCD7BA"
+    frame_color = "#7E9CD8"
+    highlight = "#7E9CD8"
+    timeout = 12
+    override_pause_level = 15
+
+[urgency_critical]
+    background = "#2D4F67"
+    foreground = "#DCD7BA"
+    frame_color = "#FF5D62"
+    highlight = "#FF5D62"
+    timeout = 0
+    override_pause_level = 60
+
+[slack]
+    appname = Slack
+    new_icon = slack
+    background = "#1F1F28"
+    foreground = "#DCD7BA"
+    frame_color = "#4A154B"
+    frame_width = 3
+    timeout = 15s
+    format = "<b>󰒱 %s</b>\n%b\n"
+    show_indicators = no
+

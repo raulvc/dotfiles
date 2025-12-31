@@ -14,5 +14,7 @@ nvim/lazy-lock.json
 !kitty/*
 !.psqlrc
 !.pspgconf
+!dunst
+!dunst/*
 !git
 !git/*
