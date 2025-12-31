@@ -5,6 +5,7 @@ return {
   { "zbirenbaum/copilot.lua", enabled = not is_kitty_scrollback },
   { "giuxtaposition/blink-cmp-copilot", enabled = not is_kitty_scrollback },
   { "saghen/blink.cmp", enabled = not is_kitty_scrollback },
+  { "xzbdmw/colorful-menu.nvim", enabled = not is_kitty_scrollback },
 
   -- Disable git-related plugins
   { "gitsigns.nvim", enabled = not is_kitty_scrollback },
