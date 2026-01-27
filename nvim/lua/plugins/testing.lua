@@ -27,6 +27,7 @@ return {
       {
         "nvim-neotest/neotest-jest",
       },
+      "nvim-contrib/nvim-ginkgo",
       "mfussenegger/nvim-dap",
     },
 
@@ -114,6 +115,11 @@ return {
           return vim.fn.getcwd()
         end,
         root_dir = find_root { "package.json", ".git" },
+      }
+
+      -- Ginkgo: for BDD-style Go tests
+      opts.adapters["nvim-ginkgo"] = {
+        root_dir = find_root { "go.mod", "go.work", ".git" },
       }
 
       opts.adapters["neotest-vim-test"] = false

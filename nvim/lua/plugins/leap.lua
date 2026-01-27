@@ -13,7 +13,7 @@ return {
     opts = { labeled_modes = "nx" },
   },
   {
-    "ggandor/leap.nvim",
+    "https://codeberg.org/andyg/leap.nvim",
     lazy = false,
     enabled = true,
     keys = {

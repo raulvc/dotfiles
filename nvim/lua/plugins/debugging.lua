@@ -542,13 +542,12 @@ return {
         },
       },
       windows = {
-        height = 0.30,
+        size = 0.3,
         position = "below",
         terminal = {
-          width = 0.5,
+          size = 0.5,
           position = "left",
           hide = { "delve" }, -- Hide built-in terminal for delve since you have custom one
-          start_hidden = true,
         },
         anchor = function()
           -- Anchor to your custom debug terminal

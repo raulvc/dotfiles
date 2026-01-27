@@ -5,5 +5,6 @@ return {
   event = "LspAttach",
   opts = {
     grace_period = 60 * 10,
+    excluded_lsp_clients = { "copilot" },
   },
 }

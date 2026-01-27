@@ -59,7 +59,7 @@ set web_browser xdg-open
 set workingfilescirclecolor #ff5555
 set wrapcomment none
 set wrapdefault none
-set geometry(main) 1920x970+0+0
+set geometry(main) 1920x970+2074+225
 set geometry(state) normal
 set geometry(topwidth) 1920
 set geometry(topheight) 237
