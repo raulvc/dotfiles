@@ -450,3 +450,13 @@ map("n", "<leader>q", ":NvimTreeToggle<CR>", { desc = "Toggle NvimTree" })
 
 -- Make ZZ save all and quit (like :wqa)
 map("n", "ZZ", ":wqa<CR>", { desc = "Save all buffers and quit Neovim" })
+
+map("n", "<leader>C", function()
+  local current_line = vim.fn.line "."
+  local win_height = vim.api.nvim_win_get_height(0)
+  local half_height = math.floor(win_height / 2)
+
+  -- Set topline to center current line
+  local new_topline = math.max(1, current_line - half_height)
+  vim.fn.winrestview { topline = new_topline }
+end, { desc = "Center cursor vertically (allow blank space)" })
