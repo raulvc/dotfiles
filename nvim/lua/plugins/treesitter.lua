@@ -145,6 +145,7 @@ return {
         "dockerfile",
         "hcl",
         "terraform",
+        "ruby",
       }
 
       vim.defer_fn(function()
@@ -156,6 +157,13 @@ return {
         pattern = "*.tpl",
         callback = function()
           vim.bo.filetype = "terraform"
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "*.rb",
+        callback = function()
+          vim.bo.filetype = "ruby"
         end,
       })
 

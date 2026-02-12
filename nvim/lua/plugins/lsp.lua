@@ -46,6 +46,7 @@ return {
           "sqls",
           "buf_ls",
           "terraformls",
+          "ruby_lsp",
         },
       }
     end,
@@ -372,6 +373,35 @@ return {
             experimentalFeatures = {
               validateOnSave = true,
               prefillRequiredFields = true,
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("ruby_lsp", {
+        capabilities = capabilities,
+        filetypes = { "ruby", "eruby" },
+        settings = {
+          rubyLsp = {
+            formatter = "none", -- Let conform/cookstyle handle formatting
+            linters = {}, -- Disable built-in linters, use cookstyle via conform
+            enabledFeatures = {
+              "documentHighlights",
+              "documentSymbols",
+              "foldingRanges",
+              "selectionRanges",
+              "semanticHighlighting",
+              "formatting",
+              "diagnostics",
+              "codeActions",
+              "codeLens",
+              "completion",
+              "definition",
+              "hover",
+              "references",
+              "rename",
+              "signatureHelp",
+              "workspaceSymbol",
             },
           },
         },

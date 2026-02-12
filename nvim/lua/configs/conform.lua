@@ -20,6 +20,7 @@ local options = {
     terraform = { "terraform_fmt" },
     tf = { "terraform_fmt" },
     hcl = { "terraform_fmt" },
+    ruby = { "cookstyle" },
   },
 
   formatters = {
@@ -67,11 +68,16 @@ local options = {
       args = { "fmt", "-" },
       stdin = true,
     },
+    -- cookstyle = {
+    --   command = "cookstyle",
+    --   args = { "--autocorrect", "--format", "quiet", "--stdin", "$FILENAME" },
+    --   stdin = true,
+    -- },
   },
 
   format_on_save = {
     -- These options will be passed to conform.format()
-    timeout_ms = 500,
+    timeout_ms = 2000,
     lsp_format = "never",
   },
 }
