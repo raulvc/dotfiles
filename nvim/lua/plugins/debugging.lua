@@ -574,7 +574,7 @@ return {
         local term_buf, term_win = create_debug_terminal "Go Debug Output"
 
         local pino_pretty_path = vim.fn.expand "/usr/bin/pino-pretty"
-        local dlv_path = vim.fn.expand "~/go/bin/dlv"
+        local dlv_path = vim.fn.expand "/usr/bin/dlv"
 
         DEBUG_TERMINAL.job_id = vim.fn.jobstart({
           "bash",

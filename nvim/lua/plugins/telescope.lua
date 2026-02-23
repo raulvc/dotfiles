@@ -11,6 +11,7 @@ return {
       "nvim-tree/nvim-web-devicons",
       "debugloop/telescope-undo.nvim",
       "nvim-telescope/telescope-frecency.nvim",
+      "nvim-telescope/telescope-smart-history.nvim",
       "kkharji/sqlite.lua",
     },
     lazy = false,
@@ -471,6 +472,10 @@ return {
             height = 0.90, -- Use 90% of screen height
             preview_cutoff = 120,
           },
+          history = {
+            path = vim.fn.stdpath "data" .. "/telescope_history.sqlite3",
+            limit = 100,
+          },
           mappings = {
             n = {
               ["q"] = actions.close,
@@ -482,6 +487,8 @@ return {
               ["<Esc>"] = actions.close,
               ["<CR>"] = smart_open_file,
               ["<C-h>"] = toggle_no_ignore, -- Toggle hidden/ignored files
+              ["<C-Down>"] = require("telescope.actions").cycle_history_next,
+              ["<C-Up>"] = require("telescope.actions").cycle_history_prev,
             },
           },
           file_previewer = with_preview_winbar(previewers.vim_buffer_cat.new),
@@ -697,6 +704,7 @@ return {
       require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"
       require("telescope").load_extension "frecency"
+      require("telescope").load_extension "smart_history"
 
       if not vim.env.KITTY_SCROLLBACK_NVIM then
         require("telescope").load_extension "noice"
