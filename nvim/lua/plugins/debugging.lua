@@ -629,6 +629,161 @@ return {
         callback = function(ev)
           vim.keymap.set("i", "<Esc>", "<C-\\><C-n>", { buffer = ev.buf, silent = true, nowait = true })
           vim.keymap.set("n", "q", "<C-w>q", { buffer = ev.buf, silent = true })
+
+          -- Evaluate .String() on the variable under cursor
+          vim.keymap.set("n", "gs", function()
+            local dap = require "dap"
+            local session = dap.session()
+            if not session then
+              vim.notify("No active debug session", vim.log.levels.WARN)
+              return
+            end
+
+            local current_line_num = vim.api.nvim_win_get_cursor(0)[1]
+            local lines = vim.api.nvim_buf_get_lines(0, 0, current_line_num + 1, false)
+
+            -- Helper to get indent level (count tabs)
+            local function get_indent(line)
+              local tabs = line:match "^(	*)"
+              return tabs and #tabs or 0
+            end
+
+            -- Helper to extract variable name from line
+            local function get_var_name(line)
+              -- Skip lines that are just pointer dereference (󰅀 = ... without a name)
+              if line:match "^[	]*%s*[󰅀󰅂]%s*=" then
+                return nil
+              end
+              -- Handle map key/value patterns: [key 0], [val 0]
+              local map_type, map_idx = line:match "%[(key)%s+(%d+)%]%s*="
+              if not map_type then
+                map_type, map_idx = line:match "%[(val)%s+(%d+)%]%s*="
+              end
+              if map_type and map_idx then
+                return nil, map_type, map_idx
+              end
+              -- Handle array index [0], [1], etc.
+              local idx = line:match "%[(%-?%d+)%]%s*="
+              if idx then
+                return "[" .. idx .. "]"
+              end
+              -- Extract name before " = "
+              local name = line:match "([%w_]+)%s*="
+              return name
+            end
+
+            -- Build path from current line up to root
+            local path_parts = {}
+            local current_indent = get_indent(lines[current_line_num])
+            local current_name, map_type, map_idx = get_var_name(lines[current_line_num])
+
+            -- Handle map key/value - extract UUID bytes directly from line
+            if map_type then
+              local line = lines[current_line_num]
+              local bytes_str = line:match "%[(%d+[%d,]+)%]"
+              if bytes_str then
+                local byte_values = {}
+                for b in bytes_str:gmatch "%d+" do
+                  table.insert(byte_values, tonumber(b))
+                end
+                if #byte_values == 16 then
+                  local uuid_str = string.format(
+                    "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                    byte_values[1],
+                    byte_values[2],
+                    byte_values[3],
+                    byte_values[4],
+                    byte_values[5],
+                    byte_values[6],
+                    byte_values[7],
+                    byte_values[8],
+                    byte_values[9],
+                    byte_values[10],
+                    byte_values[11],
+                    byte_values[12],
+                    byte_values[13],
+                    byte_values[14],
+                    byte_values[15],
+                    byte_values[16]
+                  )
+                  vim.lsp.util.open_floating_preview(
+                    { "[" .. map_type .. " " .. map_idx .. '].String() = "' .. uuid_str .. '"' },
+                    "go",
+                    { border = "rounded", title = " String() ", title_pos = "center" }
+                  )
+                  return
+                end
+              end
+              vim.notify("Could not extract UUID from map key/value", vim.log.levels.WARN)
+              return
+            end
+
+            if current_name then
+              table.insert(path_parts, 1, current_name)
+            end
+
+            local prev_indent = current_indent
+            for i = current_line_num - 1, 1, -1 do
+              local line = lines[i]
+              local indent = get_indent(line)
+
+              if indent < prev_indent then
+                local name = get_var_name(line)
+                if name then
+                  table.insert(path_parts, 1, name)
+                end
+                prev_indent = indent
+
+                if indent == 0 then
+                  break
+                end
+              end
+            end
+
+            -- Build the full variable path
+            local var_name = ""
+            for i, part in ipairs(path_parts) do
+              if part:match "^%[" then
+                var_name = var_name .. part
+              elseif i == 1 then
+                var_name = part
+              else
+                var_name = var_name .. "." .. part
+              end
+            end
+
+            if var_name == "" then
+              vim.notify("Could not extract variable name", vim.log.levels.WARN)
+              return
+            end
+
+            vim.notify("Evaluating " .. var_name .. ".String()", vim.log.levels.INFO)
+
+            local frame_id = nil
+            if session.current_frame then
+              frame_id = session.current_frame.id
+            end
+
+            session:evaluate("call " .. var_name .. ".String()", function(err, resp)
+              vim.schedule(function()
+                if err then
+                  vim.lsp.util.open_floating_preview(
+                    { "Error: " .. tostring(err) },
+                    "text",
+                    { border = "rounded", title = " Error ", title_pos = "center" }
+                  )
+                elseif resp and resp.result then
+                  vim.lsp.util.open_floating_preview(
+                    { var_name .. ".String() = " .. resp.result },
+                    "go",
+                    { border = "rounded", title = " String() ", title_pos = "center" }
+                  )
+                else
+                  vim.lsp.util.open_floating_preview({ "No result" }, "text", { border = "rounded" })
+                end
+              end)
+            end)
+          end, { buffer = ev.buf, silent = true, desc = "Evaluate .String()" })
         end,
       })
 

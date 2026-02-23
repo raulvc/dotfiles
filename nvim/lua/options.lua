@@ -212,15 +212,3 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     vim.lsp.buf.code_action { context = { only = { "source.fixAll" } }, apply = true }
   end,
 })
-
--- Auto-indent on terminal paste (Ctrl+Shift+V)
-local orig_paste = vim.paste
-vim.paste = function(lines, phase)
-  local result = orig_paste(lines, phase)
-  if phase == -1 or phase == 3 then
-    vim.schedule(function()
-      vim.cmd("normal! `[=`]")
-    end)
-  end
-  return result
-end
