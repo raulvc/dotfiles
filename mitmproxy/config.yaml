@@ -1,0 +1,5 @@
+console_palette: "solarized_dark"
+
+scripts:
+  - ~/.mitmproxy/flow_highlight.py
+
