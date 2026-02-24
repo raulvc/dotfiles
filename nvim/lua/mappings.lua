@@ -58,21 +58,30 @@ vim.keymap.set("n", "<C-Tab>", function()
   }
 end, { desc = "Recent files (frecency)" })
 
--- ---- Window resizing (matching zellij resize)
--- map("n", "<M-j>", ":resize +2<CR>", { desc = "Resize up (Alt+Shift+Up)" })
--- map("n", "<M-k>", ":resize -2<CR>", { desc = "Resize down (Alt+Shift+Down)" })
--- map("n", "<M-n>", ":vertical resize +2<CR>", { desc = "Resize right (Alt+Shift+Right)" })
--- map("n", "<M-m>", ":vertical resize -2<CR>", { desc = "Resize left (Alt+Shift+Left)" })
---
--- -- Alt + Arrow keys for window navigation
--- map("n", "<M-Left>", "<C-w>h", { desc = "Move to left window" })
--- map("n", "<M-Right>", "<C-w>l", { desc = "Move to right window" })
--- map("n", "<M-Up>", "<C-w>k", { desc = "Move to top window" })
--- map("n", "<M-Down>", "<C-w>j", { desc = "Move to bottom window" })
-map("n", "<M-Left>", require("smart-splits").move_cursor_left, { desc = "Move to left split" })
-map("n", "<M-Right>", require("smart-splits").move_cursor_right, { desc = "Move to right split" })
-map("n", "<M-Up>", require("smart-splits").move_cursor_up, { desc = "Move to top split" })
-map("n", "<M-Down>", require("smart-splits").move_cursor_down, { desc = "Move to bottom split" })
+local function smart_move(direction)
+  return function()
+    -- Check if Snacks zoom is active (zoomed window exists)
+    local is_zoomed = Snacks and Snacks.zen and Snacks.zen.win and Snacks.zen.win:valid()
+
+    if is_zoomed then
+      -- When zoomed, go directly to kitty
+      local kitty_cmd = {
+        left = "kitten @ focus-window --match neighbor:left",
+        right = "kitten @ focus-window --match neighbor:right",
+        up = "kitten @ focus-window --match neighbor:top",
+        down = "kitten @ focus-window --match neighbor:bottom",
+      }
+      vim.fn.system(kitty_cmd[direction])
+    else
+      require("smart-splits")["move_cursor_" .. direction]()
+    end
+  end
+end
+
+map("n", "<M-Left>", smart_move "left", { desc = "Move to left split" })
+map("n", "<M-Right>", smart_move "right", { desc = "Move to right split" })
+map("n", "<M-Up>", smart_move "up", { desc = "Move to top split" })
+map("n", "<M-Down>", smart_move "down", { desc = "Move to bottom split" })
 
 -- Smart Splits resizing (Alt + hjkl for consistency, or use your preferred keys)
 map("n", "<M-h>", require("smart-splits").resize_left, { desc = "Resize split left" })

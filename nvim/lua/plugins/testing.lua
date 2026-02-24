@@ -87,7 +87,7 @@ return {
         dev_notifications = true,
         dap_go_enabled = true,
         env = {
-          GOEXPERIMENT = "synctest",
+          -- GOEXPERIMENT = "synctest",
         },
 
         root_dir = find_root { "go.mod", "go.work", ".git" },
