@@ -21,6 +21,8 @@ local options = {
     tf = { "terraform_fmt" },
     hcl = { "terraform_fmt" },
     ruby = { "cookstyle" },
+    java = { "google-java-format" },
+    xml = { "xmlformat" },
   },
 
   formatters = {
@@ -68,6 +70,16 @@ local options = {
       args = { "fmt", "-" },
       stdin = true,
     },
+    ["google-java-format"] = {
+      command = "google-java-format",
+      stdin = true,
+    },
+    xmlformat = {
+      command = "xmlformat",
+      args = { "--indent", "2", "-" },
+      stdin = true,
+    },
+
     -- cookstyle = {
     --   command = "cookstyle",
     --   args = { "--autocorrect", "--format", "quiet", "--stdin", "$FILENAME" },

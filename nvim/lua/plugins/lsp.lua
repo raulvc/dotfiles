@@ -47,6 +47,8 @@ return {
           "buf_ls",
           "terraformls",
           "ruby_lsp",
+          "lemminx",
+          "jdtls",
         },
       }
     end,
@@ -402,6 +404,66 @@ return {
               "rename",
               "signatureHelp",
               "workspaceSymbol",
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("lemminx", {
+        capabilities = capabilities,
+        filetypes = { "xml", "xsd", "xsl", "xslt", "svg" },
+        settings = {
+          xml = {
+            catalogs = {},
+            logs = { client = true },
+            format = {
+              enabled = true,
+              splitAttributes = false,
+            },
+            validation = {
+              enabled = true,
+              noGrammar = "hint",
+            },
+            completion = {
+              autoCloseTags = true,
+            },
+            -- Maven specific settings
+            java = {
+              home = vim.fn.getenv "JAVA_HOME",
+            },
+            downloadExternalResources = {
+              enabled = true,
+            },
+            fileAssociations = {
+              {
+                pattern = "pom.xml",
+                systemId = "https://maven.apache.org/xsd/maven-4.0.0.xsd",
+              },
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("jdtls", {
+        capabilities = capabilities,
+        filetypes = { "java" },
+        settings = {
+          java = {
+            format = { enabled = false },
+            signatureHelp = { enabled = true },
+            contentProvider = { preferred = "fernflower" },
+            completion = {
+              favoriteStaticMembers = {
+                "org.junit.Assert.*",
+                "org.junit.jupiter.api.Assertions.*",
+                "org.mockito.Mockito.*",
+              },
+            },
+            sources = {
+              organizeImports = {
+                starThreshold = 9999,
+                staticStarThreshold = 9999,
+              },
             },
           },
         },

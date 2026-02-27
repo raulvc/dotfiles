@@ -146,6 +146,8 @@ return {
         "hcl",
         "terraform",
         "ruby",
+        "xml",
+        "java",
       }
 
       vim.defer_fn(function()
