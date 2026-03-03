@@ -29,10 +29,7 @@ return {
     },
 
     opts = {
-      enhanced_diff_hl = false, -- Disable to avoid color conflicts
-      default = {
-        disable_diagnostics = true, -- Disable diagnostics in diff view
-      },
+      enhanced_diff_hl = true, -- Enable for better word-level diff highlighting
       view = {
         default = {
           layout = "diff2_horizontal",
@@ -46,8 +43,18 @@ return {
           layout = "diff2_horizontal",
         },
       },
+      file_panel = {
+        listing_style = "tree",
+        tree_options = {
+          flatten_dirs = true,
+          folder_statuses = "only_folded",
+        },
+        win_config = {
+          position = "left",
+          width = 35,
+        },
+      },
       hooks = {
-        -- do not fold
         diff_buf_win_enter = function(bufnr)
           vim.opt_local.foldenable = false
         end,
@@ -55,56 +62,7 @@ return {
     },
 
     config = function(_, opts)
-      local actions = require "diffview.actions"
-
       require("diffview").setup(opts)
-
-      -- Set Kanagawa-compatible diff colors
-      local function set_diffview_highlights()
-        local colors = {
-          bg = "#1f1f28",
-          fg = "#dcd7ba",
-          red = "#e82424",
-          green = "#98bb6c",
-          blue = "#7e9cd8",
-          yellow = "#e6c384",
-          gray = "#54546d",
-        }
-
-        local highlights = {
-          -- Diff colors
-          DiffAdd = { bg = "#2a3f2a", fg = colors.green },
-          DiffDelete = { bg = "#3f2a2a", fg = colors.red },
-          DiffChange = { bg = "#2a2f3f", fg = colors.blue },
-          DiffText = { bg = "#3a3f5f", fg = colors.yellow, bold = true },
-
-          -- Diffview specific
-          DiffviewNormal = { bg = colors.bg, fg = colors.fg },
-          DiffviewCursorLine = { bg = colors.gray },
-          DiffviewFilePanelTitle = { bg = colors.blue, fg = colors.bg, bold = true },
-          DiffviewFilePanelCounter = { fg = colors.blue, bold = true },
-          DiffviewFilePanelFileName = { fg = colors.fg },
-          DiffviewFolderSign = { fg = colors.gray },
-          DiffviewStatusAdded = { fg = colors.green },
-          DiffviewStatusDeleted = { fg = colors.red },
-          DiffviewStatusModified = { fg = colors.blue },
-          DiffviewStatusRenamed = { fg = colors.yellow },
-          DiffviewStatusUntracked = { fg = colors.gray },
-        }
-
-        for group, opts_hl in pairs(highlights) do
-          vim.api.nvim_set_hl(0, group, opts_hl)
-        end
-      end
-
-      -- Set highlights after colorscheme loads
-      vim.api.nvim_create_autocmd("ColorScheme", {
-        pattern = "*",
-        callback = set_diffview_highlights,
-      })
-
-      -- Set highlights immediately
-      set_diffview_highlights()
     end,
 
     keys = {

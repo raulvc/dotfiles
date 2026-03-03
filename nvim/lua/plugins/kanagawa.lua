@@ -77,11 +77,11 @@ return {
             PmenuSbar = { bg = theme.ui.bg_m1 },
             PmenuThumb = { bg = theme.ui.bg_p2 },
 
-            -- Better diff colors
-            DiffAdd = { bg = palette.winterGreen, fg = palette.sumiInk0 },
-            DiffChange = { bg = palette.winterYellow, fg = palette.sumiInk0 },
-            DiffDelete = { bg = palette.winterRed, fg = palette.sumiInk0 },
-            DiffText = { bg = palette.winterBlue, fg = palette.sumiInk0 },
+            -- Better diff colors (fg = NONE to keep text readable)
+            DiffAdd = { bg = palette.winterGreen, fg = "NONE" },
+            DiffChange = { bg = palette.winterYellow, fg = "NONE" },
+            DiffDelete = { bg = palette.winterRed, fg = "NONE" },
+            DiffText = { bg = palette.winterBlue, fg = "NONE", bold = true },
 
             -- Gitsigns
             GitSignsAdd = { fg = palette.autumnGreen },
