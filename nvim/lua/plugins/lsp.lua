@@ -447,6 +447,10 @@ return {
       vim.lsp.config("jdtls", {
         capabilities = capabilities,
         filetypes = { "java" },
+        cmd = {
+          "jdtls",
+          "--jvm-arg=-javaagent:" .. vim.fn.expand "~/.local/share/java/lombok.jar",
+        },
         settings = {
           java = {
             format = { enabled = false },
@@ -457,6 +461,10 @@ return {
                 "org.junit.Assert.*",
                 "org.junit.jupiter.api.Assertions.*",
                 "org.mockito.Mockito.*",
+                "lombok.Builder",
+                "lombok.Data",
+                "lombok.Getter",
+                "lombok.Setter",
               },
             },
             sources = {

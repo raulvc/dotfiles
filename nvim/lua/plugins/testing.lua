@@ -117,10 +117,14 @@ return {
         root_dir = find_root { "package.json", ".git" },
       }
 
-      -- Ginkgo: for BDD-style Go tests
-      opts.adapters["nvim-ginkgo"] = {
-        root_dir = find_root { "go.mod", "go.work", ".git" },
-      }
+      -- Ginkgo: for BDD-style Go tests (must be listed BEFORE neotest-golang)
+      -- We use a numeric index to control ordering
+      table.insert(opts.adapters, 1, {
+        name = "nvim-ginkgo",
+        config = {
+          root_dir = find_root { "go.mod", "go.work", ".git" },
+        },
+      })
 
       opts.adapters["neotest-vim-test"] = false
       opts.consumers = opts.consumers or {}
