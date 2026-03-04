@@ -5,14 +5,25 @@ local map = vim.keymap.set
 map("n", "<cr>", function()
   local node = vim.treesitter.get_node()
   if not node then
+    vim.cmd "normal! viw"
     return
+  end
+
+  -- Get the smallest (leaf) node at cursor position
+  while node:child_count() > 0 do
+    local child = node:child(0)
+    if child then
+      node = child
+    else
+      break
+    end
   end
 
   local start_row, start_col, end_row, end_col = node:range()
   vim.fn.setpos("'<", { 0, start_row + 1, start_col + 1, 0 })
   vim.fn.setpos("'>", { 0, end_row + 1, end_col, 0 })
   vim.cmd "normal! gv"
-end, { desc = "Select treesitter node" })
+end, { desc = "Select treesitter leaf node" })
 
 map("n", ";", ":", { desc = "CMD enter command mode" })
 map("i", "jk", "<ESC>")

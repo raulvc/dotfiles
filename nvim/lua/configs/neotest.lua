@@ -25,6 +25,24 @@ return function(_, opts)
         if type(config) == "table" and config.name then
           local adapter = require(config.name)
           local adapter_config = config.config or {}
+
+          -- Inject is_test_file for ginkgo to only match actual ginkgo tests
+          if config.name == "neotest-ginkgo" then
+            adapter_config.is_test_file = adapter_config.is_test_file
+              or function(file_path)
+                if not vim.endswith(file_path, "_test.go") then
+                  return false
+                end
+                local file = io.open(file_path, "r")
+                if not file then
+                  return false
+                end
+                local content = file:read "*a"
+                file:close()
+                return content:match "github.com/onsi/ginkgo" ~= nil
+              end
+          end
+
           if type(adapter_config) == "table" and not vim.tbl_isempty(adapter_config) then
             local meta = getmetatable(adapter)
             if adapter.setup then
@@ -64,6 +82,23 @@ return function(_, opts)
 
     -- Merge priority adapters first, then regular adapters
     opts.adapters = vim.list_extend(priority_adapters, adapters)
+  end
+
+  -- Add consumer for build failure notifications before setup
+  opts.consumers = opts.consumers or {}
+  opts.consumers.notify = function(client)
+    client.listeners.results = function(adapter_id, results)
+      for pos_id, result in pairs(results) do
+        if result.status == "failed" and result.errors then
+          for _, err in ipairs(result.errors) do
+            if err.message then
+              vim.notify(err.message, vim.log.levels.ERROR, { title = "Test Failed" })
+            end
+          end
+        end
+      end
+    end
+    return {}
   end
 
   require("neotest").setup(opts)

@@ -32,23 +32,127 @@ return {
     },
 
     opts = function(_, opts)
-      opts.output = {
-        enabled = true,
+      -- Pretty icons for test status
+      opts.icons = {
+        passed = "✓",
+        failed = "✗",
+        running = "⟳",
+        skipped = "○",
+        unknown = "?",
+        non_collapsible = "─",
+        collapsed = "",
+        expanded = "",
+        child_prefix = "├",
+        final_child_prefix = "╰",
+        child_indent = "│",
+        final_child_indent = " ",
+        watching = "󰈈",
+        running_animated = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
       }
 
+      -- Floating output window (prettier than split)
+      opts.output = {
+        enabled = true,
+        open_on_run = false, -- Don't auto-open, use <leader>to
+      }
+
+      -- Output panel at bottom
       opts.output_panel = {
         enabled = true,
         open = "botright split | resize 15",
       }
 
-      opts.log_level = vim.log.levels.DEBUG
+      -- Summary panel configuration
+      opts.summary = {
+        enabled = true,
+        animated = true,
+        follow = true,
+        expand_errors = true,
+        open = "botright vsplit | vertical resize 50",
+        mappings = {
+          expand = { "<CR>", "<2-LeftMouse>" },
+          expand_all = "e",
+          jumpto = "<C-CR>",
+          output = "o",
+          short = "O",
+          attach = "a",
+          run = "r",
+          mark = "m",
+          run_marked = "R",
+          debug = "d",
+          debug_marked = "D",
+          clear_marked = "M",
+          target = "t",
+          clear_target = "T",
+          stop = "s",
+          watch = "w",
+        },
+      }
+
+      -- Status virtual text
+      opts.status = {
+        enabled = true,
+        virtual_text = true,
+        signs = true,
+      }
+
+      -- Highlight groups for test status
+      opts.highlights = {
+        passed = "NeotestPassed",
+        failed = "NeotestFailed",
+        running = "NeotestRunning",
+        skipped = "NeotestSkipped",
+        test = "NeotestTest",
+        namespace = "NeotestNamespace",
+        file = "NeotestFile",
+        dir = "NeotestDir",
+        focused = "NeotestFocused",
+        adapter_name = "NeotestAdapterName",
+        select_win = "NeotestSelectWin",
+        marked = "NeotestMarked",
+        target = "NeotestTarget",
+        unknown = "NeotestUnknown",
+        watching = "NeotestWatching",
+      }
+
+      -- Floating window settings
+      opts.floating = {
+        border = "rounded",
+        max_height = 0.6,
+        max_width = 0.8,
+        options = {},
+      }
+
+      -- Running configuration
+      opts.run = {
+        enabled = true,
+      }
+
+      -- Quickfix integration
+      opts.quickfix = {
+        enabled = true,
+        open = false, -- Don't auto-open, use trouble instead
+      }
+
+      opts.log_level = vim.log.levels.WARN -- Less noisy than DEBUG
 
       -- Disable discovery to prevent scanning on startup
       opts.discovery = {
-        enabled = false, -- Only discover tests when explicitly running them
+        enabled = false,
+        concurrent = 1,
       }
 
-      quickfix = { require("trouble").open { mode = "quickfix", focus = false } }
+      -- Diagnostic integration
+      opts.diagnostic = {
+        enabled = true,
+        severity = vim.diagnostic.severity.ERROR,
+      }
+
+      -- Watch mode
+      opts.watch = {
+        enabled = true,
+        symbol_queries = {},
+      }
 
       opts.adapters = opts.adapters or {}
 
@@ -159,7 +263,26 @@ return {
       --   overseer = require "neotest.consumers.overseer",
       -- }
     end,
-    config = require "configs.neotest",
+    config = function(_, opts)
+      -- Set up highlight groups for neotest
+      vim.api.nvim_set_hl(0, "NeotestPassed", { fg = "#50fa7b", bold = true })
+      vim.api.nvim_set_hl(0, "NeotestFailed", { fg = "#ff5555", bold = true })
+      vim.api.nvim_set_hl(0, "NeotestRunning", { fg = "#f1fa8c" })
+      vim.api.nvim_set_hl(0, "NeotestSkipped", { fg = "#6272a4" })
+      vim.api.nvim_set_hl(0, "NeotestTest", { fg = "#f8f8f2" })
+      vim.api.nvim_set_hl(0, "NeotestNamespace", { fg = "#8be9fd" })
+      vim.api.nvim_set_hl(0, "NeotestFile", { fg = "#bd93f9" })
+      vim.api.nvim_set_hl(0, "NeotestDir", { fg = "#ffb86c" })
+      vim.api.nvim_set_hl(0, "NeotestFocused", { fg = "#f8f8f2", bold = true, underline = true })
+      vim.api.nvim_set_hl(0, "NeotestAdapterName", { fg = "#ff79c6", bold = true })
+      vim.api.nvim_set_hl(0, "NeotestMarked", { fg = "#f1fa8c", bold = true })
+      vim.api.nvim_set_hl(0, "NeotestTarget", { fg = "#ff5555" })
+      vim.api.nvim_set_hl(0, "NeotestUnknown", { fg = "#6272a4" })
+      vim.api.nvim_set_hl(0, "NeotestWatching", { fg = "#f1fa8c" })
+
+      -- Call the original config
+      require "configs.neotest"(_, opts)
+    end,
     keys = {
       {
         "<leader>ta",
