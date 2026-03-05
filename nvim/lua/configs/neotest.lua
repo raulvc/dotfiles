@@ -14,6 +14,20 @@ return function(_, opts)
     require("rust-tools").setup {}
   end)
 
+  -- Helper to check if file is a ginkgo test
+  local function is_ginkgo_file(file_path)
+    if not vim.endswith(file_path, "_test.go") then
+      return false
+    end
+    local file = io.open(file_path, "r")
+    if not file then
+      return false
+    end
+    local content = file:read "*a"
+    file:close()
+    return content:match "github.com/onsi/ginkgo" ~= nil
+  end
+
   -- Adapter setup logic
   if opts.adapters then
     local adapters = {}
@@ -27,20 +41,20 @@ return function(_, opts)
           local adapter_config = config.config or {}
 
           -- Inject is_test_file for ginkgo to only match actual ginkgo tests
-          if config.name == "neotest-ginkgo" then
-            adapter_config.is_test_file = adapter_config.is_test_file
-              or function(file_path)
-                if not vim.endswith(file_path, "_test.go") then
-                  return false
+          if config.name == "nvim-ginkgo" then
+            -- Wrap the adapter to filter by file content
+            local original_adapter = adapter
+            adapter = setmetatable({}, {
+              __call = function(_, ...)
+                return original_adapter(...)
+              end,
+              __index = function(_, key)
+                if key == "is_test_file" then
+                  return is_ginkgo_file
                 end
-                local file = io.open(file_path, "r")
-                if not file then
-                  return false
-                end
-                local content = file:read "*a"
-                file:close()
-                return content:match "github.com/onsi/ginkgo" ~= nil
-              end
+                return original_adapter[key]
+              end,
+            })
           end
 
           if type(adapter_config) == "table" and not vim.tbl_isempty(adapter_config) then
