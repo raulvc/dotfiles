@@ -41,7 +41,7 @@ return function(_, opts)
           local adapter_config = config.config or {}
 
           -- Inject is_test_file for ginkgo to only match actual ginkgo tests
-          if config.name == "nvim-ginkgo" then
+          if config.name == "neotest-ginkgo" then
             -- Wrap the adapter to filter by file content
             local original_adapter = adapter
             adapter = setmetatable({}, {

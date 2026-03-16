@@ -27,7 +27,7 @@ return {
       {
         "nvim-neotest/neotest-jest",
       },
-      "nvim-contrib/nvim-ginkgo",
+      "nvim-contrib/neotest-ginkgo",
       "mfussenegger/nvim-dap",
     },
 
@@ -224,7 +224,7 @@ return {
       -- Ginkgo: for BDD-style Go tests (must be listed BEFORE neotest-golang)
       -- We use a numeric index to control ordering
       table.insert(opts.adapters, 1, {
-        name = "nvim-ginkgo",
+        name = "neotest-ginkgo",
         config = {
           root_dir = find_root { "go.mod", "go.work", ".git" },
         },
