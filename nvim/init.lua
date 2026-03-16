@@ -31,8 +31,6 @@ end)
 -- Make word navigation stop at special characters like Sublime Text
 vim.keymap.set({ "n", "v" }, "<C-Left>", "b", { desc = "Move word backward" })
 vim.keymap.set({ "n", "v" }, "<C-Right>", "w", { desc = "Move word forward" })
+vim.keymap.set("i", "<C-Left>", "<C-o>b", { desc = "Move word backward" })
+vim.keymap.set("i", "<C-Right>", "<C-o>w", { desc = "Move word forward" })
 vim.opt.iskeyword = "@,48-57,_,192-255"
-
--- require("overseer").setup {
---   strategy = "toggleterm",
--- }

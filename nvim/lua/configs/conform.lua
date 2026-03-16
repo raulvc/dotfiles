@@ -79,6 +79,11 @@ local options = {
       args = { "--indent", "2", "-" },
       stdin = true,
     },
+    checkmake = {
+      command = "checkmake",
+      args = { "$FILENAME" },
+      stdin = false,
+    },
 
     -- cookstyle = {
     --   command = "cookstyle",

@@ -32,21 +32,52 @@ return {
           },
         },
 
-        -- ⚠️ FIX #1: Change 'strategies' to 'interactions'
-        interactions = {
+        strategies = {
           chat = {
             adapter = "genplat",
             slash_commands = {
               ["buffer"] = {
-                opts = {
-                  provider = "telescope",
-                  telescope_picker = function()
-                    require("telescope").extensions.frecency.frecency {
-                      workspace = "CWD",
-                      prompt_title = "Select Buffer for CodeCompanion",
-                    }
-                  end,
-                },
+                callback = function(chat)
+                  if not _G.multi_select_picker_open then
+                    vim.notify("multi_select_picker_open not loaded yet", vim.log.levels.ERROR)
+                    return
+                  end
+                  _G.multi_select_picker_open {
+                    on_select = function(_, entries)
+                      for _, entry in ipairs(entries) do
+                        local bufnr = entry.bufnr
+                        if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+                          local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+                          local content = table.concat(lines, "\n")
+                          local rel_path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ":.")
+                          local ft = vim.bo[bufnr].filetype or ""
+                          local id = "<buf>" .. rel_path .. "</buf>"
+
+                          chat:add_context(
+                            {
+                              content = string.format(
+                                "Here is the content from the buffer `%s` (with a filetype of `%s`):\n\n```%s\n%s\n```",
+                                rel_path,
+                                ft,
+                                ft,
+                                content
+                              ),
+                              role = "user",
+                            },
+                            "codecompanion.interactions.chat.slash_commands.builtin.buffer",
+                            id,
+                            {
+                              bufnr = bufnr,
+                              path = rel_path,
+                              visible = false,
+                            }
+                          )
+                        end
+                      end
+                    end,
+                  }
+                end,
+                description = "Insert buffer(s) (multi-select)",
                 keymaps = {
                   modes = {
                     i = "<C-b>",
@@ -62,7 +93,7 @@ return {
 
           http = {
             opts = {
-              show_presets = false, -- 🔑 This hides all built-in adapters
+              show_presets = false,
               show_model_choices = true,
               show_defaults = false,
             },
@@ -77,9 +108,10 @@ return {
                 },
                 schema = {
                   model = {
-                    default = "claude-opus-4-5-20251101-v1",
+                    default = "claude-opus-4-6-bedrock",
                     choices = {
-                      "claude-sonnet-4-5-20250929-v1.0",
+                      "claude-opus-4-6-bedrock",
+                      "claude-opus-4-6-vertexai",
                       "claude-opus-4-5-20251101-v1",
                     },
                   },

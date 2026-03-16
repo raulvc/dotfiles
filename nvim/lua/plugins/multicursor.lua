@@ -41,7 +41,15 @@ return {
         if match_count > 0 then
           -- Use searchAllAddCursors with the processed pattern
           mc.searchAllAddCursors(processed_pattern)
-          -- Removed vim.cmd "startinsert" - stay in normal mode
+          -- Select the match (Sublime-style) using pattern length
+          local plen = #processed_pattern
+          if plen > 1 then
+            mc.action(function(ctx)
+              ctx:forEachCursor(function(cursor)
+                cursor:feedkeys("v" .. (plen - 1) .. "l", { remap = false })
+              end)
+            end)
+          end
 
           vim.notify(string.format("Added cursors to %d matches", match_count))
         else
@@ -59,6 +67,15 @@ return {
         if match_count > 0 then
           -- Use searchAllAddCursors with the current search pattern
           mc.searchAllAddCursors(search_reg)
+          -- Select the match (Sublime-style) using pattern length
+          local plen = #search_reg
+          if plen > 1 then
+            mc.action(function(ctx)
+              ctx:forEachCursor(function(cursor)
+                cursor:feedkeys("v" .. (plen - 1) .. "l", { remap = false })
+              end)
+            end)
+          end
 
           vim.notify(string.format("Added cursors to %d matches", match_count))
         else
@@ -73,7 +90,111 @@ return {
       mc.matchAllAddCursors()
     end, { desc = "Add cursors to all matches of selection" })
 
-    vim.keymap.set("x", "<C-S-l>", mc.addCursorOperator)
+    vim.keymap.set("x", "<C-S-l>", function()
+      mc.addCursorOperator()
+      vim.schedule(function()
+        mc.action(function(ctx)
+          ctx:forEachCursor(function(cursor)
+            cursor:feedkeys("$", { remap = false })
+          end)
+        end)
+      end)
+    end, { desc = "Add cursors at end of lines (Sublime-style)" })
+
+    -- Sync multicursor yanks to system clipboard (Sublime-style)
+    vim.keymap.set({ "n", "v" }, "y", function()
+      if not mc.hasCursors() then
+        local keys = vim.api.nvim_replace_termcodes("y", true, false, true)
+        vim.api.nvim_feedkeys(keys, "n", false)
+        return
+      end
+      mc.action(function(ctx)
+        local lines = {}
+        ctx:forEachCursor(function(cursor)
+          cursor:feedkeys("y", { remap = false })
+          table.insert(lines, vim.fn.getreg '"')
+        end)
+        local combined = table.concat(lines, "\n")
+        vim.fn.setreg('"', combined)
+        vim.fn.setreg("+", combined)
+      end)
+    end, { desc = "Yank with multicursor clipboard sync" })
+
+    vim.keymap.set("n", "Y", function()
+      if not mc.hasCursors() then
+        local keys = vim.api.nvim_replace_termcodes("Y", true, false, true)
+        vim.api.nvim_feedkeys(keys, "n", false)
+        return
+      end
+      mc.action(function(ctx)
+        local lines = {}
+        ctx:forEachCursor(function(cursor)
+          cursor:feedkeys("Y", { remap = false })
+          table.insert(lines, vim.fn.getreg '"')
+        end)
+        local combined = table.concat(lines, "\n")
+        vim.fn.setreg('"', combined)
+        vim.fn.setreg("+", combined)
+      end)
+    end, { desc = "Yank line with multicursor clipboard sync" })
+
+    -- Sublime-style paste: distribute lines across cursors when counts match
+    local function mc_paste(paste_key)
+      return function()
+        if not mc.hasCursors() then
+          local keys = vim.api.nvim_replace_termcodes(paste_key, true, false, true)
+          vim.api.nvim_feedkeys(keys, "n", false)
+          return
+        end
+
+        local content = vim.fn.getreg "+"
+        if not content or content == "" then
+          content = vim.fn.getreg '"'
+        end
+        if not content or content == "" then
+          return
+        end
+
+        -- Split content into lines, remove trailing empty line if present
+        local lines = vim.split(content, "\n", { plain = true })
+        if lines[#lines] == "" then
+          table.remove(lines)
+        end
+
+        -- Count cursors
+        local cursor_count = 0
+        mc.action(function(ctx)
+          ctx:forEachCursor(function()
+            cursor_count = cursor_count + 1
+          end)
+        end)
+
+        if #lines == cursor_count and cursor_count > 1 then
+          -- Distribute one line per cursor
+          mc.action(function(ctx)
+            local i = 0
+            ctx:forEachCursor(function(cursor)
+              i = i + 1
+              vim.fn.setreg('"', lines[i])
+              cursor:feedkeys(paste_key, { remap = false })
+            end)
+          end)
+          -- Restore full content to registers
+          vim.fn.setreg('"', content)
+          vim.fn.setreg("+", content)
+        else
+          -- Normal paste across all cursors
+          mc.action(function(ctx)
+            ctx:forEachCursor(function(cursor)
+              cursor:feedkeys(paste_key, { remap = false })
+            end)
+          end)
+        end
+      end
+    end
+
+    vim.keymap.set({ "n", "v" }, "p", mc_paste "p", { desc = "Paste (Sublime-style multicursor)" })
+    vim.keymap.set({ "n", "v" }, "P", mc_paste "P", { desc = "Paste before (Sublime-style multicursor)" })
 
     local hl = vim.api.nvim_set_hl
     hl(0, "MultiCursorCursor", { link = "Cursor" })

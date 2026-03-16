@@ -441,6 +441,43 @@ return {
           end, { buffer = bufnr, desc = "Copy relative path" })
         end,
       }
+
+      -- Auto-switch nvim-tree root based on current buffer location
+      vim.api.nvim_create_autocmd("BufEnter", {
+        callback = function()
+          local bufname = vim.api.nvim_buf_get_name(0)
+          if bufname == "" or vim.bo.buftype ~= "" then
+            return
+          end
+
+          -- Skip if we're in nvim-tree itself
+          if vim.bo.filetype == "NvimTree" then
+            return
+          end
+
+          local buf_dir = vim.fn.fnamemodify(bufname, ":p:h")
+          local mod_dir = find_module_dir_for_path(bufname)
+
+          if mod_dir then
+            -- Buffer is in a known Go module
+            if is_dep_dir(mod_dir) then
+              -- It's a dependency - switch to dependency root
+              if current_tree_root ~= mod_dir then
+                if not is_dep_dir(current_tree_root) then
+                  last_project_root = current_tree_root
+                end
+                set_tree_root(mod_dir)
+              end
+            else
+              -- It's our project - switch back to project root
+              local project_root = get_git_root(buf_dir)
+              if current_tree_root ~= project_root and is_dep_dir(current_tree_root) then
+                set_tree_root(project_root)
+              end
+            end
+          end
+        end,
+      })
     end,
   },
 }

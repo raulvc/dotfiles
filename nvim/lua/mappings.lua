@@ -64,10 +64,12 @@ end
 map("n", "<M-S-w>", smart_close, { desc = "Close buffer" })
 
 vim.keymap.set("n", "<C-Tab>", function()
-  require("telescope").extensions.frecency.frecency {
-    workspace = "CWD",
+  require("telescope.builtin").buffers {
+    sort_lastused = true,
+    ignore_current_buffer = true,
+    initial_mode = "normal",
   }
-end, { desc = "Recent files (frecency)" })
+end, { desc = "Switch to recent buffer (JetBrains-style)" })
 
 local function smart_move(direction)
   return function()
@@ -147,7 +149,12 @@ vim.keymap.set({ "n", "v" }, "<Esc>", function()
   end
 
   if mc.hasCursors() then
-    mc.clearCursors()
+    local mode = vim.fn.mode()
+    if mode:match "[vV\22]" then
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    else
+      mc.clearCursors()
+    end
   else
     vim.cmd "silent! NoiceDismiss"
     vim.cmd "silent! noh"
@@ -468,8 +475,8 @@ end, { desc = "Move to end of line (exclude line break)" })
 
 map("n", "<leader>q", ":NvimTreeToggle<CR>", { desc = "Toggle NvimTree" })
 
--- Make ZZ save all and quit (like :wqa)
-map("n", "ZZ", ":wqa<CR>", { desc = "Save all buffers and quit Neovim" })
+map("n", "ZZ", ":wqa!<CR>", { desc = "Save all buffers and quit Neovim" })
+map("n", "ZQ", ":qa!<CR>", { desc = "Quit all without saving" })
 
 map("n", "<leader>C", function()
   local current_line = vim.fn.line "."

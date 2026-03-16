@@ -115,6 +115,10 @@ return {
             DiagnosticVirtualTextInfo = { bg = "none", fg = palette.dragonBlue },
             DiagnosticVirtualTextHint = { bg = "none", fg = palette.springViolet1 },
 
+            -- Multiselect highlights
+            TelescopeMultiSelected = { bg = "#2a2a3f", fg = palette.springBlue },
+            TelescopeMultiSelectedIcon = { fg = palette.springBlue, bold = true },
+
             -- Treesitter context
             TreesitterContext = { bg = theme.ui.bg_p2 },
             TreesitterContextLineNumber = { fg = theme.ui.special, bg = theme.ui.bg_p2 },

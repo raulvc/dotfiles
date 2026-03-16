@@ -2,7 +2,7 @@ return {
   {
     "mfussenegger/nvim-lint",
     dependencies = {
-      "williamboman/mason.nvim", -- Ensure mason is installed for managing linters
+      "williamboman/mason.nvim",
       "rshkarin/mason-nvim-lint",
     },
     event = { "BufReadPre", "BufNewFile" },
@@ -18,7 +18,6 @@ return {
         go = { "golangcilint" },
         bash = { "shellcheck" },
         sh = { "shellcheck" },
-        -- Add more as needed
       }
 
       require("mason-nvim-lint").setup {
@@ -26,19 +25,25 @@ return {
         automatic_installation = true,
       }
 
-      -- Create autocommand group for linting
       local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
 
-      -- In your nvim-lint config, replace the autocmd with:
+      -- Lint on read and insert leave for fast feedback
+      vim.api.nvim_create_autocmd({ "BufReadPost", "InsertLeave" }, {
+        group = lint_augroup,
+        callback = function()
+          lint.try_lint()
+        end,
+      })
+
+      -- Lint after save — conform runs on BufWritePre so formatting
+      -- is already done by the time BufWritePost fires. No delay needed.
       vim.api.nvim_create_autocmd("BufWritePost", {
         group = lint_augroup,
         callback = function()
-          -- Format first, then lint
-          vim.defer_fn(function()
-            lint.try_lint()
-          end, 100) -- Small delay to let conform finish
+          lint.try_lint()
         end,
       })
+
       -- Manual lint trigger
       vim.keymap.set("n", "<leader>ll", function()
         lint.try_lint()

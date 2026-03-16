@@ -63,8 +63,13 @@ return {
             local original_display = made.display
             if type(original_display) == "function" then
               made.display = function(e)
-                local text = original_display(e)
-                return text, { { { 1, #text }, "TelescopeTestFile" } }
+                local text, existing_hl = original_display(e)
+                if type(text) == "table" then
+                  return text
+                end
+                local hl = existing_hl or {}
+                table.insert(hl, { { 0, #text }, "TelescopeTestFile" })
+                return text, hl
               end
             end
           end
@@ -89,13 +94,18 @@ return {
             local is_callable = type(original_display) == "function"
 
             made.display = function(e)
-              local display_text
+              local display_text, existing_hl
               if is_callable then
-                display_text = original_display(e)
+                display_text, existing_hl = original_display(e)
               else
                 display_text = original_display
               end
-              return display_text, { { { 1, #display_text }, test_file_hl } }
+              if type(display_text) == "table" then
+                return display_text
+              end
+              local hl = existing_hl or {}
+              table.insert(hl, { { 0, #display_text }, test_file_hl })
+              return display_text, hl
             end
           end
 
@@ -119,13 +129,18 @@ return {
             local is_callable = type(original_display) == "function"
 
             made.display = function(e)
-              local display_text
+              local display_text, existing_hl
               if is_callable then
-                display_text = original_display(e)
+                display_text, existing_hl = original_display(e)
               else
                 display_text = original_display
               end
-              return display_text, { { { 1, #display_text }, test_file_hl } }
+              if type(display_text) == "table" then
+                return display_text
+              end
+              local hl = existing_hl or {}
+              table.insert(hl, { { 0, #display_text }, test_file_hl })
+              return display_text, hl
             end
           end
           return made
@@ -324,22 +339,32 @@ return {
           local method = p.preview_fn and "preview_fn" or "preview"
           local orig_preview = p[method]
           local orig_teardown = p.teardown
+          local last_timer = nil
 
           p[method] = function(self, entry, status)
+            local ret = orig_preview(self, entry, status)
+
             local winid = status and status.preview_win
-            local bufnr = self.state and self.state.bufnr
             local path = entry and (entry.filename or entry.path or entry.value)
 
-            -- clear any old spacer
-            if bufnr then
-              pcall(vim.api.nvim_buf_clear_namespace, bufnr, ns_pathbar, 0, -1)
+            -- Cancel any pending timer to avoid stale updates
+            if last_timer then
+              pcall(vim.fn.timer_stop, last_timer)
+              last_timer = nil
             end
 
-            -- set after preview draws to avoid flicker/missed updates
-            vim.defer_fn(function()
-              if winid and path then
+            vim.schedule(function()
+              -- Validate window still exists
+              if not winid or not vim.api.nvim_win_is_valid(winid) then
+                return
+              end
+
+              local bufnr = vim.api.nvim_win_get_buf(winid)
+
+              -- Set winbar
+              if path then
                 local shown = vim.fn.fnamemodify(path, ":~:.")
-                local left_sep, right_sep = "", "" -- Nerd Font
+                local left_sep, right_sep = "\u{e0b6}", "\u{e0b4}" -- Nerd Font
                 local bar = table.concat {
                   "%#TelescopePathBarSep#",
                   left_sep,
@@ -351,28 +376,37 @@ return {
                   right_sep,
                   "%*",
                 }
-                pcall(vim.api.nvim_win_set_option, winid, "winbar", bar)
+                pcall(vim.api.nvim_set_option_value, "winbar", bar, { win = winid })
               end
-              -- add a virtual spacer line between winbar and content
-              if bufnr then
-                pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_pathbar, 0, 0, {
-                  virt_lines = { { { " ", "TelescopeNormal" } } },
-                  virt_lines_above = true,
-                  hl_mode = "combine",
-                })
-              end
-            end, 10)
 
-            return orig_preview(self, entry, status)
+              -- Clear old extmarks and add spacer
+              if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+                pcall(vim.api.nvim_buf_clear_namespace, bufnr, ns_pathbar, 0, -1)
+                local line_count = vim.api.nvim_buf_line_count(bufnr)
+                if line_count > 0 then
+                  pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_pathbar, 0, 0, {
+                    virt_lines = { { { " ", "TelescopeNormal" } } },
+                    virt_lines_above = true,
+                    hl_mode = "combine",
+                  })
+                end
+              end
+            end)
+
+            return ret
           end
 
           p.teardown = function(self)
+            if last_timer then
+              pcall(vim.fn.timer_stop, last_timer)
+              last_timer = nil
+            end
             local winid2 = self.state and self.state.winid
             local bufnr2 = self.state and self.state.bufnr
-            if winid2 then
-              pcall(vim.api.nvim_win_set_option, winid2, "winbar", "")
+            if winid2 and vim.api.nvim_win_is_valid(winid2) then
+              pcall(vim.api.nvim_set_option_value, "winbar", "", { win = winid2 })
             end
-            if bufnr2 then
+            if bufnr2 and vim.api.nvim_buf_is_valid(bufnr2) then
               pcall(vim.api.nvim_buf_clear_namespace, bufnr2, ns_pathbar, 0, -1)
             end
             if orig_teardown then
@@ -439,9 +473,9 @@ return {
 
       require("telescope").setup {
         defaults = {
-          prompt_prefix = "󰭎 ",
-          selection_caret = " ",
-          multi_icon = "󰒆 ",
+          prompt_prefix = "  ",
+          selection_caret = "▸ ",
+          multi_icon = "+ ",
           sorting_strategy = "ascending",
           border = true,
           borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
@@ -714,6 +748,292 @@ return {
       vim.api.nvim_create_user_command("UndoTelescope", function()
         require("telescope").extensions.undo.undo()
       end, { desc = "Open Telescope Undo" })
+
+      -- ============================================================
+      -- Multi-select buffer picker for CodeCompanion
+      -- ============================================================
+      local ms_ns = vim.api.nvim_create_namespace "TelescopeMultiSelectNS"
+
+      local function ms_refresh_pane(sel_buf, selected_order)
+        if not sel_buf or not vim.api.nvim_buf_is_valid(sel_buf) then
+          return
+        end
+        vim.api.nvim_set_option_value("modifiable", true, { buf = sel_buf })
+
+        local lines = {}
+        if #selected_order == 0 then
+          lines = { "  No files selected" }
+        else
+          for i, path in ipairs(selected_order) do
+            local icon = require("nvim-web-devicons").get_icon(path, nil, { default = true }) or "󰈚"
+            lines[i] = "  " .. icon .. "  " .. path
+          end
+        end
+
+        vim.api.nvim_buf_set_lines(sel_buf, 0, -1, false, lines)
+        vim.api.nvim_buf_clear_namespace(sel_buf, ms_ns, 0, -1)
+
+        if #selected_order == 0 then
+          vim.api.nvim_buf_add_highlight(sel_buf, ms_ns, "Comment", 0, 0, -1)
+        else
+          for i, path in ipairs(selected_order) do
+            local icon = require("nvim-web-devicons").get_icon(path, nil, { default = true }) or "󰈚"
+            local icon_end = 2 + #icon
+            local path_start = icon_end + 2
+            vim.api.nvim_buf_add_highlight(sel_buf, ms_ns, "TelescopeMultiSelectedIcon", i - 1, 0, icon_end)
+            vim.api.nvim_buf_add_highlight(sel_buf, ms_ns, "TelescopeMultiSelected", i - 1, path_start, -1)
+          end
+        end
+
+        vim.api.nvim_set_option_value("modifiable", false, { buf = sel_buf })
+      end
+
+      local function ms_highlight_rows(prompt_bufnr, selected_map)
+        local picker = action_state.get_current_picker(prompt_bufnr)
+        if not picker or not picker.results_bufnr then
+          return
+        end
+        local results_buf = picker.results_bufnr
+        if not vim.api.nvim_buf_is_valid(results_buf) then
+          return
+        end
+
+        vim.api.nvim_buf_clear_namespace(results_buf, ms_ns, 0, -1)
+
+        local manager = picker.manager
+        if not manager then
+          return
+        end
+
+        for i = 1, manager:num_results() do
+          local entry = manager:get_entry(i)
+          if entry then
+            local path = entry.filename or entry.path or entry.value
+            if path and selected_map[path] then
+              -- Use extmark with high priority so it renders over Telescope's own highlights
+              vim.api.nvim_buf_set_extmark(results_buf, ms_ns, i - 1, 0, {
+                end_row = i - 1,
+                end_col = 0,
+                hl_eol = true,
+                line_hl_group = "TelescopeMultiSelected",
+                priority = 200,
+              })
+            end
+          end
+        end
+      end
+
+      -- Test keymap to debug the multi-select picker independently
+      vim.keymap.set("n", "<leader>mb", function()
+        _G.multi_select_picker_open {
+          on_select = function(paths)
+            vim.notify("Selected: " .. table.concat(paths, ", "), vim.log.levels.INFO)
+          end,
+        }
+      end, { desc = "Test multi-select picker" })
+
+      -- Expose globally so CodeCompanion config can call it
+      _G.multi_select_picker_open = function(opts)
+        opts = opts or {}
+        local on_select = opts.on_select
+
+        local selected_map = {}
+        local selected_order = {}
+        local selected_entries = {}
+
+        local sel_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = sel_buf })
+
+        local sel_win = nil
+
+        -- Get listed buffers sorted by last used (matching C-Tab behavior)
+        local bufs = vim.fn.getbufinfo { buflisted = 1 }
+        table.sort(bufs, function(a, b)
+          return a.lastused > b.lastused
+        end)
+
+        -- Build a bufnr lookup and a plain path list for the entry maker
+        local bufnr_map = {}
+        local path_list = {}
+        for _, buf in ipairs(bufs) do
+          local name = buf.name
+          if name and name ~= "" and not name:match "NvimTree" then
+            local rel = vim.fn.fnamemodify(name, ":.")
+            path_list[#path_list + 1] = rel
+            bufnr_map[rel] = buf.bufnr
+            bufnr_map[name] = buf.bufnr
+          end
+        end
+
+        local telescope_pickers = require "telescope.pickers"
+        local telescope_finders = require "telescope.finders"
+        local telescope_conf = require("telescope.config").values
+
+        local function cleanup()
+          if sel_win and vim.api.nvim_win_is_valid(sel_win) then
+            pcall(vim.api.nvim_win_close, sel_win, true)
+          end
+          if sel_buf and vim.api.nvim_buf_is_valid(sel_buf) then
+            pcall(vim.api.nvim_buf_delete, sel_buf, { force = true })
+          end
+          sel_win = nil
+        end
+
+        local picker_inst = telescope_pickers.new(opts, {
+          prompt_title = "Select Buffers",
+          results_title = "Open Buffers",
+          previewer = require("telescope.config").values.file_previewer {},
+          finder = telescope_finders.new_table {
+            results = path_list,
+            entry_maker = make_tree_entry_for_files(),
+          },
+          sorter = telescope_conf.generic_sorter(opts),
+          attach_mappings = function(prompt_bufnr, map)
+            local function toggle_selection()
+              local entry = action_state.get_selected_entry()
+              if not entry then
+                return
+              end
+
+              local path = entry.filename or entry.path or entry.value
+              if selected_map[path] then
+                selected_map[path] = nil
+                selected_entries[path] = nil
+                for i, p in ipairs(selected_order) do
+                  if p == path then
+                    table.remove(selected_order, i)
+                    break
+                  end
+                end
+              else
+                selected_map[path] = true
+                selected_entries[path] = {
+                  bufnr = entry.bufnr or bufnr_map[path] or bufnr_map[entry.path or ""],
+                  path = entry.path or path,
+                }
+                selected_order[#selected_order + 1] = path
+              end
+
+              ms_refresh_pane(sel_buf, selected_order)
+              ms_highlight_rows(prompt_bufnr, selected_map)
+              actions.move_selection_next(prompt_bufnr)
+            end
+
+            local function confirm_selection()
+              actions.close(prompt_bufnr)
+              cleanup()
+              if on_select and #selected_order > 0 then
+                local entries = {}
+                for _, path in ipairs(selected_order) do
+                  entries[#entries + 1] = selected_entries[path]
+                end
+                on_select(selected_order, entries)
+              end
+            end
+
+            local function close_picker()
+              actions.close(prompt_bufnr)
+              cleanup()
+            end
+
+            map("i", "<Tab>", toggle_selection)
+            map("n", "<Tab>", toggle_selection)
+            map("i", "<CR>", confirm_selection)
+            map("n", "<CR>", confirm_selection)
+            map("i", "<Esc>", close_picker)
+            map("n", "<Esc>", close_picker)
+            map("n", "q", close_picker)
+
+            -- Re-apply highlights when results change after filtering
+            vim.schedule(function()
+              local p = action_state.get_current_picker(prompt_bufnr)
+              if p then
+                local orig_process_complete = p.process_complete
+                if orig_process_complete then
+                  p.process_complete = function(self2, ...)
+                    local ret = orig_process_complete(self2, ...)
+                    vim.schedule(function()
+                      ms_highlight_rows(prompt_bufnr, selected_map)
+                    end)
+                    return ret
+                  end
+                end
+              end
+            end)
+
+            return true
+          end,
+        })
+
+        picker_inst:find()
+
+        -- Create floating selection pane below the Telescope layout
+        vim.defer_fn(function()
+          local picker_obj = action_state.get_current_picker(picker_inst.prompt_bufnr)
+          if not picker_obj then
+            return
+          end
+
+          -- Find the Telescope border window to position relative to it
+          local layout = picker_obj.layout
+          local results_win = picker_obj.results_win
+          if not results_win or not vim.api.nvim_win_is_valid(results_win) then
+            return
+          end
+
+          -- Get the position of the results window
+          local results_pos = vim.api.nvim_win_get_position(results_win)
+          local results_width = vim.api.nvim_win_get_width(results_win)
+          local results_height = vim.api.nvim_win_get_height(results_win)
+
+          -- Shrink the results window to make room for selection pane
+          local sel_height = 8
+          local new_results_height = results_height - sel_height - 2
+          if new_results_height < 5 then
+            new_results_height = 5
+            sel_height = results_height - new_results_height - 2
+          end
+          vim.api.nvim_win_set_height(results_win, new_results_height)
+
+          -- Position the selection pane float below results
+          local sel_row = results_pos[1] + new_results_height + 1
+          local sel_col = results_pos[2]
+
+          sel_win = vim.api.nvim_open_win(sel_buf, false, {
+            relative = "editor",
+            row = sel_row,
+            col = sel_col,
+            width = results_width,
+            height = sel_height,
+            style = "minimal",
+            border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
+            title = " 󰈚 Selected Files ",
+            title_pos = "center",
+            focusable = false,
+            zindex = 100,
+          })
+
+          vim.api.nvim_set_option_value("number", false, { win = sel_win })
+          vim.api.nvim_set_option_value("relativenumber", false, { win = sel_win })
+          vim.api.nvim_set_option_value("cursorline", false, { win = sel_win })
+          vim.api.nvim_set_option_value(
+            "winhighlight",
+            "Normal:TelescopeNormal,FloatBorder:TelescopeBorder,FloatTitle:TelescopePromptTitle",
+            { win = sel_win }
+          )
+
+          ms_refresh_pane(sel_buf, selected_order)
+
+          -- Auto-close selection pane when picker closes
+          vim.api.nvim_create_autocmd("BufWipeout", {
+            buffer = picker_inst.prompt_bufnr,
+            once = true,
+            callback = function()
+              vim.schedule(cleanup)
+            end,
+          })
+        end, 50)
+      end
     end,
   },
   {
