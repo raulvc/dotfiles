@@ -6,31 +6,9 @@ return {
       "nvim-tree/nvim-web-devicons", -- Enhanced file icons
     },
     config = function()
-      -- Enhanced colors for nvim-tree
-      vim.api.nvim_set_hl(0, "NvimTreeFolderIcon", { fg = "#61afef" })
-      vim.api.nvim_set_hl(0, "NvimTreeFolderName", { fg = "#61afef" })
-      vim.api.nvim_set_hl(0, "NvimTreeOpenedFolderName", { fg = "#61afef", bold = true })
-      vim.api.nvim_set_hl(0, "NvimTreeEmptyFolderName", { fg = "#61afef" })
-      vim.api.nvim_set_hl(0, "NvimTreeIndentMarker", { fg = "#3b4261" })
-      vim.api.nvim_set_hl(0, "NvimTreeWinSeparator", { fg = "#3b4261" })
-      vim.api.nvim_set_hl(0, "NvimTreeRootFolder", { fg = "#e06c75", bold = true })
-      vim.api.nvim_set_hl(0, "NvimTreeSymlink", { fg = "#56b6c2" })
-      vim.api.nvim_set_hl(0, "NvimTreeExecFile", { fg = "#98c379" })
-      vim.api.nvim_set_hl(0, "NvimTreeImageFile", { fg = "#d19a66" })
-      vim.api.nvim_set_hl(0, "NvimTreeSpecialFile", { fg = "#e5c07b" })
-      vim.api.nvim_set_hl(0, "NvimTreeNormal", { bg = "#21252b" })
-      vim.api.nvim_set_hl(0, "NvimTreeCursorLine", { bg = "#2c313c" })
-
-      -- Git status colors
-      vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#e06c75" })
-      vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#98c379" })
-      vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#d19a66" })
-      vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#d19a66" })
-      vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#98c379" })
-      vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#e06c75" })
-      vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#5c6370" })
-
-      vim.api.nvim_set_hl(0, "NvimTreeTestFile", { bg = "#252c25", fg = "#76946a" })
+      -- NvimTreeTestFile is set here since it's custom (not a standard nvim-tree group)
+      -- Uses Kanagawa-inspired colors: winterGreen bg + autumnGreen fg
+      vim.api.nvim_set_hl(0, "NvimTreeTestFile", { bg = "#2B3328", fg = "#76946A" })
 
       local test_patterns = {
         "_test%.go$",
@@ -50,36 +28,30 @@ return {
         return false
       end
 
-      local highlight_timer = nil
-      local function highlight_test_files()
-        if highlight_timer then
-          vim.fn.timer_stop(highlight_timer)
+      -- Use extmarks + namespace for efficient, flicker-free test file highlights
+      local ns = vim.api.nvim_create_namespace "nvim_tree_test_files"
+
+      -- Synchronous — must be called from a context where nvim API is safe
+      local function highlight_test_files(tree_bufnr)
+        if not vim.api.nvim_buf_is_valid(tree_bufnr) then
+          return
         end
 
-        highlight_timer = vim.fn.timer_start(100, function()
-          if vim.bo.filetype == "NvimTree" then
-            -- Clear any existing matches
-            vim.fn.clearmatches()
+        -- Clear all previous marks (the buffer was just rewritten by nvim-tree anyway)
+        vim.api.nvim_buf_clear_namespace(tree_bufnr, ns, 0, -1)
 
-            -- Get visible lines only for better performance
-            local win = vim.api.nvim_get_current_win()
-            local top_line = vim.fn.line "w0"
-            local bottom_line = vim.fn.line "w$"
-            local lines = vim.api.nvim_buf_get_lines(0, top_line - 1, bottom_line, false)
-
-            for i, line in ipairs(lines) do
-              -- Extract just the filename from the tree line
-              local filename = line:match "[^/]*$" or ""
-              if is_test_file(filename) then
-                -- Match only the icon and filename, skipping tree structure chars (│├└─ etc)
-                -- Pattern: skip tree chars, then match icon (emoji/nerd font) + space + filename
-                local pattern = "\\%" .. (top_line + i - 1) .. "l[│├└─ ]*\\zs[^ │├└─].*"
-                vim.fn.matchadd("NvimTreeTestFile", pattern, 10)
-              end
-            end
+        local lines = vim.api.nvim_buf_get_lines(tree_bufnr, 0, -1, false)
+        for i, line in ipairs(lines) do
+          local filename = line:match "[^/]*$" or ""
+          if is_test_file(filename) then
+            local col_start = line:find "[^ │├└─]" or 1
+            vim.api.nvim_buf_set_extmark(tree_bufnr, ns, i - 1, col_start - 1, {
+              end_col = #line,
+              hl_group = "NvimTreeTestFile",
+              priority = 200,
+            })
           end
-          highlight_timer = nil
-        end)
+        end
       end
 
       local api = require "nvim-tree.api"
@@ -368,33 +340,13 @@ return {
         on_attach = function(bufnr)
           local api = require "nvim-tree.api"
 
-          -- Highlight test files whenever tree content changes
-          local function setup_tree_highlights()
-            vim.api.nvim_create_autocmd({ "BufEnter", "CursorMoved", "WinScrolled" }, {
-              buffer = bufnr,
-              callback = function()
-                highlight_test_files()
-              end,
-            })
-          end
+          -- Refresh test file highlights when tree content changes
+          local tree_events = require("nvim-tree.api").events
+          tree_events.subscribe(tree_events.Event.TreeRendered, function()
+            highlight_test_files(bufnr)
+          end)
 
-          -- Set up highlights after a short delay to ensure tree is rendered
-          vim.defer_fn(setup_tree_highlights, 100)
-
-          -- Show full name in command line when cursor moves
-          vim.api.nvim_create_autocmd("CursorMoved", {
-            buffer = bufnr,
-            callback = function()
-              local node = api.tree.get_node_under_cursor()
-              if node then
-                vim.cmd('echo "' .. node.absolute_path:gsub('"', '\\"') .. '"')
-              end
-              -- Also trigger highlight refresh when cursor moves
-              highlight_test_files()
-            end,
-          })
-
-          -- Show full name in command line when cursor moves
+          -- Show full path in command line on cursor move (no highlight refresh needed)
           vim.api.nvim_create_autocmd("CursorMoved", {
             buffer = bufnr,
             callback = function()

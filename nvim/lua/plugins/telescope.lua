@@ -19,47 +19,34 @@ return {
       local actions = require "telescope.actions"
       local action_state = require "telescope.actions.state"
 
-      -- Pre-compile patterns for better performance
-      local test_pattern_compiled = vim.regex [[\v(test|spec|mock|Test|Spec|Mock)]]
-
-      -- Faster test file check using single regex
+      -- Fast test file detection using plain string.find (no regex overhead)
+      local test_file_hl = "TelescopeTestFile"
       local function is_test_file(filename)
         if not filename then
           return false
         end
-        return test_pattern_compiled:match_str(filename) ~= nil
+        -- Case-sensitive plain substring checks are the fastest possible approach
+        return filename:find("test", 1, true)
+          or filename:find("spec", 1, true)
+          or filename:find("mock", 1, true)
+          or filename:find("Test", 1, true)
+          or filename:find("Spec", 1, true)
+          or filename:find("Mock", 1, true)
       end
 
-      -- Cached highlight for test files
-      local test_file_hl = "TelescopeTestFile"
-
-      -- Optimized entry maker for live_grep - minimal allocation version
-      local function make_entry_with_test_highlight()
-        local make_entry = require "telescope.make_entry"
-        local original_maker = make_entry.gen_from_vimgrep()
-
-        return function(entry)
-          local made = original_maker(entry)
-          if not made or not made.filename then
-            return made
-          end
-
-          -- Quick test: skip regex if no potential match characters
-          local fname = made.filename
-          if
-            not (
-              fname:find("test", 1, true)
-              or fname:find("spec", 1, true)
-              or fname:find("mock", 1, true)
-              or fname:find("Test", 1, true)
-              or fname:find("Spec", 1, true)
-              or fname:find("Mock", 1, true)
-            )
-          then
-            return made
-          end
-
-          if test_pattern_compiled:match_str(fname) then
+      -- Generic factory: wraps any entry maker to highlight test files
+      local function wrap_entry_maker_with_test_hl(make_original)
+        return function()
+          local original_maker = make_original()
+          return function(entry)
+            local made = original_maker(entry)
+            if not made then
+              return nil
+            end
+            local fname = made.filename or made.value
+            if not fname or not is_test_file(fname) then
+              return made
+            end
             local original_display = made.display
             if type(original_display) == "function" then
               made.display = function(e)
@@ -68,84 +55,26 @@ return {
                   return text
                 end
                 local hl = existing_hl or {}
-                table.insert(hl, { { 0, #text }, "TelescopeTestFile" })
+                hl[#hl + 1] = { { 0, #text }, test_file_hl }
                 return text, hl
               end
             end
-          end
-
-          return made
-        end
-      end
-
-      -- Optimized file entry maker
-      local function make_file_entry_with_test_highlight()
-        local make_entry = require "telescope.make_entry"
-        local original_maker = make_entry.gen_from_file()
-
-        return function(entry)
-          local made = original_maker(entry)
-          if not made or not made.value then
             return made
           end
-
-          if is_test_file(made.value) then
-            local original_display = made.display
-            local is_callable = type(original_display) == "function"
-
-            made.display = function(e)
-              local display_text, existing_hl
-              if is_callable then
-                display_text, existing_hl = original_display(e)
-              else
-                display_text = original_display
-              end
-              if type(display_text) == "table" then
-                return display_text
-              end
-              local hl = existing_hl or {}
-              table.insert(hl, { { 0, #display_text }, test_file_hl })
-              return display_text, hl
-            end
-          end
-
-          return made
         end
       end
 
-      -- Optimized LSP entry maker
-      local function make_lsp_entry_with_test_highlight()
-        local make_entry = require "telescope.make_entry"
-        local original_maker = make_entry.gen_from_quickfix()
+      local make_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function()
+        return require("telescope.make_entry").gen_from_vimgrep()
+      end)
 
-        return function(entry)
-          local made = original_maker(entry)
-          if not made then
-            return nil
-          end
+      local make_file_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function()
+        return require("telescope.make_entry").gen_from_file()
+      end)
 
-          if is_test_file(made.filename) then
-            local original_display = made.display
-            local is_callable = type(original_display) == "function"
-
-            made.display = function(e)
-              local display_text, existing_hl
-              if is_callable then
-                display_text, existing_hl = original_display(e)
-              else
-                display_text = original_display
-              end
-              if type(display_text) == "table" then
-                return display_text
-              end
-              local hl = existing_hl or {}
-              table.insert(hl, { { 0, #display_text }, test_file_hl })
-              return display_text, hl
-            end
-          end
-          return made
-        end
-      end
+      local make_lsp_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function()
+        return require("telescope.make_entry").gen_from_quickfix()
+      end)
 
       local function is_file_entry(entry)
         if not entry then
@@ -243,12 +172,6 @@ return {
         local make_entry = require "telescope.make_entry"
         local base_maker = make_entry.gen_from_file {}
 
-        -- Pre-compile patterns
-        local test_pat = vim.regex [[\v(test|spec|mock)]]
-        local config_pat = vim.regex [[\v\.(json|ya?ml|toml)$]]
-        local go_pat = vim.regex [[\.go$]]
-        local doc_pat = vim.regex [[\v\.(md|txt)$]]
-
         -- Cache indent strings to avoid repeated string.rep calls
         local indent_cache = {}
         local function get_indent(depth)
@@ -259,6 +182,26 @@ return {
             indent_cache[depth] = string.rep("  ", depth) .. "└─ "
           end
           return indent_cache[depth]
+        end
+
+        -- Lua pattern-based file type detection (no vim.regex overhead)
+        local function get_filename_hl(fname)
+          if is_test_file(fname) then
+            return "TelescopeTestFile"
+          end
+          -- Config files
+          if fname:match "%.json$" or fname:match "%.ya?ml$" or fname:match "%.toml$" then
+            return "String"
+          end
+          -- Go files
+          if fname:match "%.go$" then
+            return "Function"
+          end
+          -- Doc files
+          if fname:match "%.md$" or fname:match "%.txt$" then
+            return "Special"
+          end
+          return "TelescopeResultsIdentifier"
         end
 
         return function(entry)
@@ -281,19 +224,7 @@ return {
           icon = icon or "󰈚"
           icon_hl = icon_hl or "DevIconDefault"
 
-          -- Determine highlight using pre-compiled patterns
-          local filename_hl
-          if test_pat:match_str(filename) then
-            filename_hl = "TelescopeTestFile"
-          elseif config_pat:match_str(filename) then
-            filename_hl = "String"
-          elseif go_pat:match_str(filename) then
-            filename_hl = "Function"
-          elseif doc_pat:match_str(filename) then
-            filename_hl = "Special"
-          else
-            filename_hl = "TelescopeResultsIdentifier"
-          end
+          local filename_hl = get_filename_hl(filename)
 
           -- Pre-compute lengths
           local indent_len = #tree_indent
@@ -663,8 +594,16 @@ return {
         },
       }
 
-      -- Kanagawa-inspired telescope highlights
-      local function set_telescope_highlights()
+      -- Telescope test file + path bar highlights (set via Kanagawa overrides for theme colors,
+      -- but TelescopeTestFile and path bar need explicit hl since they're custom groups)
+      local function set_custom_telescope_highlights()
+        local colors = {
+          bg = "#1f1f28",
+          fg = "#dcd7ba",
+          green = "#98bb6c",
+          yellow = "#e6c384",
+        }
+        -- Blend helper for path bar
         local function hex_to_rgb(hex)
           hex = hex:gsub("#", "")
           return tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
@@ -677,63 +616,20 @@ return {
           local br, bgC, bb = hex_to_rgb(bg)
           return rgb_to_hex(br + (fr - br) * alpha, bgC + (fgc - bgC) * alpha, bb + (fb - bb) * alpha)
         end
+        local bar_bg = blend(colors.yellow, colors.bg, 0.22)
+        local bar_fg = blend(colors.yellow, colors.fg, 0.35)
 
-        local colors = {
-          bg = "#1f1f28", -- Unified background for all windows
-          bg_dark = "#16161d", -- Slightly darker for subtle depth
-          fg = "#dcd7ba", -- Kanagawa foreground
-          blue = "#7e9cd8", -- Kanagawa blue
-          cyan = "#6a9589", -- Kanagawa cyan
-          green = "#98bb6c", -- Kanagawa green
-          orange = "#ff9e3b", -- Kanagawa orange
-          purple = "#957fb8", -- Kanagawa purple
-          red = "#e82424", -- Kanagawa red
-          yellow = "#e6c384", -- Kanagawa yellow
-          gray = "#54546d", -- Kanagawa gray
-          border = "#54546d", -- Softer border using gray
-        }
-
-        local bar_bg = blend(colors.yellow, colors.bg, 0.22) -- subtle yellow tint
-        local bar_fg = blend(colors.yellow, colors.fg, 0.35) -- soft yellow text
-
-        local highlights = {
-          TelescopeNormal = { bg = colors.bg, fg = colors.fg },
-          TelescopeBorder = { bg = colors.bg, fg = colors.border },
-          TelescopePromptNormal = { bg = colors.bg, fg = colors.fg },
-          TelescopePromptBorder = { bg = colors.bg, fg = colors.blue },
-          TelescopePromptTitle = { bg = colors.blue, fg = colors.bg, bold = true },
-          TelescopePromptPrefix = { bg = colors.bg, fg = colors.blue },
-          TelescopeResultsNormal = { bg = colors.bg, fg = colors.fg },
-          TelescopeResultsBorder = { bg = colors.bg, fg = colors.border },
-          TelescopeResultsTitle = { bg = colors.bg, fg = colors.fg },
-          TelescopePreviewNormal = { bg = colors.bg, fg = colors.fg },
-          TelescopePreviewBorder = { bg = colors.bg, fg = colors.border },
-          TelescopePreviewTitle = { bg = colors.green, fg = colors.bg, bold = true },
-          TelescopeSelection = { bg = colors.gray, fg = colors.fg, bold = true },
-          TelescopeSelectionCaret = { fg = colors.blue, bold = true },
-          TelescopeMultiSelection = { fg = colors.cyan, bold = true },
-          TelescopeMatching = { fg = colors.orange, bold = true },
-          TelescopeTestFile = { bg = "#2a3f2a", fg = colors.green }, -- Green tint for test files
-          TelescopePathBar = { bg = bar_bg, fg = bar_fg, bold = true },
-          TelescopePathBarSep = { bg = colors.bg, fg = bar_bg },
-          -- Additional highlights for tree view
-          TelescopeResultsIdentifier = { fg = colors.blue },
-          TelescopeTreeIndent = { fg = colors.gray },
-        }
-
-        for group, opts in pairs(highlights) do
-          vim.api.nvim_set_hl(0, group, opts)
-        end
+        vim.api.nvim_set_hl(0, "TelescopeTestFile", { bg = "#2a3f2a", fg = colors.green })
+        vim.api.nvim_set_hl(0, "TelescopePathBar", { bg = bar_bg, fg = bar_fg, bold = true })
+        vim.api.nvim_set_hl(0, "TelescopePathBarSep", { bg = colors.bg, fg = bar_bg })
+        vim.api.nvim_set_hl(0, "TelescopeTreeIndent", { fg = "#54546d" })
       end
 
-      -- Set highlights after colorscheme loads
       vim.api.nvim_create_autocmd("ColorScheme", {
         pattern = "*",
-        callback = set_telescope_highlights,
+        callback = set_custom_telescope_highlights,
       })
-
-      -- Set highlights immediately
-      set_telescope_highlights()
+      set_custom_telescope_highlights()
 
       require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"
