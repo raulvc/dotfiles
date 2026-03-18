@@ -148,6 +148,8 @@ return {
         "ruby",
         "xml",
         "java",
+        "python",
+        "properties",
       }
 
       vim.defer_fn(function()
@@ -173,6 +175,27 @@ return {
         pattern = { ".pgpass", "pgpass" },
         callback = function()
           vim.bo.filetype = "conf"
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "sonar-project.properties",
+        callback = function()
+          vim.bo.filetype = "properties"
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "*.avsc",
+        callback = function()
+          vim.bo.filetype = "json"
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "*.cql",
+        callback = function()
+          vim.bo.filetype = "sql"
         end,
       })
 

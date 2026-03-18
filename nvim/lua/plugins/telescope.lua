@@ -404,9 +404,9 @@ return {
 
       require("telescope").setup {
         defaults = {
-          prompt_prefix = "  ",
-          selection_caret = "▸ ",
-          multi_icon = "+ ",
+          prompt_prefix = "   ",
+          selection_caret = "  ",
+          multi_icon = "󰄬 ",
           sorting_strategy = "ascending",
           border = true,
           borderchars = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
@@ -593,43 +593,6 @@ return {
           },
         },
       }
-
-      -- Telescope test file + path bar highlights (set via Kanagawa overrides for theme colors,
-      -- but TelescopeTestFile and path bar need explicit hl since they're custom groups)
-      local function set_custom_telescope_highlights()
-        local colors = {
-          bg = "#1f1f28",
-          fg = "#dcd7ba",
-          green = "#98bb6c",
-          yellow = "#e6c384",
-        }
-        -- Blend helper for path bar
-        local function hex_to_rgb(hex)
-          hex = hex:gsub("#", "")
-          return tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
-        end
-        local function rgb_to_hex(r, g, b)
-          return string.format("#%02x%02x%02x", math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5))
-        end
-        local function blend(fg, bg, alpha)
-          local fr, fgc, fb = hex_to_rgb(fg)
-          local br, bgC, bb = hex_to_rgb(bg)
-          return rgb_to_hex(br + (fr - br) * alpha, bgC + (fgc - bgC) * alpha, bb + (fb - bb) * alpha)
-        end
-        local bar_bg = blend(colors.yellow, colors.bg, 0.22)
-        local bar_fg = blend(colors.yellow, colors.fg, 0.35)
-
-        vim.api.nvim_set_hl(0, "TelescopeTestFile", { bg = "#2a3f2a", fg = colors.green })
-        vim.api.nvim_set_hl(0, "TelescopePathBar", { bg = bar_bg, fg = bar_fg, bold = true })
-        vim.api.nvim_set_hl(0, "TelescopePathBarSep", { bg = colors.bg, fg = bar_bg })
-        vim.api.nvim_set_hl(0, "TelescopeTreeIndent", { fg = "#54546d" })
-      end
-
-      vim.api.nvim_create_autocmd("ColorScheme", {
-        pattern = "*",
-        callback = set_custom_telescope_highlights,
-      })
-      set_custom_telescope_highlights()
 
       require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"

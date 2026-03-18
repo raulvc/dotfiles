@@ -133,7 +133,7 @@ return {
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
               autoImportCompletions = true,
-              diagnosticMode = "workspace", -- or "openFilesOnly"
+              diagnosticMode = "openFilesOnly",
 
               -- Disable specific diagnostics if needed
               diagnosticSeverityOverrides = {
