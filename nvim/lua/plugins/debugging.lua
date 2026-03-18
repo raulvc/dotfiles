@@ -518,6 +518,7 @@ return {
   {
     "igorlfs/nvim-dap-view",
     event = "VeryLazy",
+    version = "1.*",
     dependencies = {
       "mfussenegger/nvim-dap",
     },
@@ -623,6 +624,86 @@ return {
         cleanup_debug_terminal()
       end
 
+      -- Helper to build the full variable path from the scopes/watches view
+      local function build_var_path_from_cursor()
+        local current_line_num = vim.api.nvim_win_get_cursor(0)[1]
+        local lines = vim.api.nvim_buf_get_lines(0, 0, current_line_num + 1, false)
+
+        local function get_indent(line)
+          local tabs = line:match "^(\t*)"
+          return tabs and #tabs or 0
+        end
+
+        local function get_var_name(line)
+          -- Skip lines that are just pointer dereference (icon = ... without a name)
+          if line:match "^[\t]*%s*[󰅀󰅂]%s*=" then
+            return nil
+          end
+          -- Handle map key/value patterns: [key 0], [val 0]
+          local map_type, map_idx = line:match "%[(key)%s+(%d+)%]%s*="
+          if not map_type then
+            map_type, map_idx = line:match "%[(val)%s+(%d+)%]%s*="
+          end
+          if map_type and map_idx then
+            return nil, map_type, map_idx
+          end
+          -- Handle array index [0], [1], etc.
+          local idx = line:match "%[(%-?%d+)%]%s*="
+          if idx then
+            return "[" .. idx .. "]"
+          end
+          -- Try full expression after expand/collapse icon (watches view)
+          -- Captures things like: 󰅀 campaigns[0].Campaign = ...
+          local icon_expr = line:match "[󰅀󰅂]%s+([%w_%.%[%]]+)%s*="
+          if icon_expr then
+            return icon_expr
+          end
+          -- Extract name before " = "
+          return line:match "([%w_]+)%s*="
+        end
+
+        local path_parts = {}
+        local current_indent = get_indent(lines[current_line_num])
+        local current_name, map_type, map_idx = get_var_name(lines[current_line_num])
+
+        if map_type then
+          return nil, map_type, map_idx, lines[current_line_num]
+        end
+
+        if current_name then
+          table.insert(path_parts, 1, current_name)
+        end
+
+        local prev_indent = current_indent
+        for i = current_line_num - 1, 1, -1 do
+          local line = lines[i]
+          local indent = get_indent(line)
+          if indent < prev_indent then
+            local name = get_var_name(line)
+            if name then
+              table.insert(path_parts, 1, name)
+            end
+            prev_indent = indent
+            if indent == 0 then
+              break
+            end
+          end
+        end
+
+        local var_name = ""
+        for i, part in ipairs(path_parts) do
+          if part:match "^%[" then
+            var_name = var_name .. part
+          elseif i == 1 then
+            var_name = part
+          else
+            var_name = var_name .. "." .. part
+          end
+        end
+
+        return var_name
+      end
+
       -- Fix ESC in REPL to properly exit insert mode
       vim.api.nvim_create_autocmd("FileType", {
         pattern = { "dap-repl", "dap-view" },
@@ -639,48 +720,11 @@ return {
               return
             end
 
-            local current_line_num = vim.api.nvim_win_get_cursor(0)[1]
-            local lines = vim.api.nvim_buf_get_lines(0, 0, current_line_num + 1, false)
-
-            -- Helper to get indent level (count tabs)
-            local function get_indent(line)
-              local tabs = line:match "^(	*)"
-              return tabs and #tabs or 0
-            end
-
-            -- Helper to extract variable name from line
-            local function get_var_name(line)
-              -- Skip lines that are just pointer dereference (󰅀 = ... without a name)
-              if line:match "^[	]*%s*[󰅀󰅂]%s*=" then
-                return nil
-              end
-              -- Handle map key/value patterns: [key 0], [val 0]
-              local map_type, map_idx = line:match "%[(key)%s+(%d+)%]%s*="
-              if not map_type then
-                map_type, map_idx = line:match "%[(val)%s+(%d+)%]%s*="
-              end
-              if map_type and map_idx then
-                return nil, map_type, map_idx
-              end
-              -- Handle array index [0], [1], etc.
-              local idx = line:match "%[(%-?%d+)%]%s*="
-              if idx then
-                return "[" .. idx .. "]"
-              end
-              -- Extract name before " = "
-              local name = line:match "([%w_]+)%s*="
-              return name
-            end
-
-            -- Build path from current line up to root
-            local path_parts = {}
-            local current_indent = get_indent(lines[current_line_num])
-            local current_name, map_type, map_idx = get_var_name(lines[current_line_num])
+            local var_name, map_type, map_idx, raw_line = build_var_path_from_cursor()
 
             -- Handle map key/value - extract UUID bytes directly from line
             if map_type then
-              local line = lines[current_line_num]
-              local bytes_str = line:match "%[(%d+[%d,]+)%]"
+              local bytes_str = raw_line:match "%[(%d+[%d,]+)%]"
               if bytes_str then
                 local byte_values = {}
                 for b in bytes_str:gmatch "%d+" do
@@ -718,51 +762,12 @@ return {
               return
             end
 
-            if current_name then
-              table.insert(path_parts, 1, current_name)
-            end
-
-            local prev_indent = current_indent
-            for i = current_line_num - 1, 1, -1 do
-              local line = lines[i]
-              local indent = get_indent(line)
-
-              if indent < prev_indent then
-                local name = get_var_name(line)
-                if name then
-                  table.insert(path_parts, 1, name)
-                end
-                prev_indent = indent
-
-                if indent == 0 then
-                  break
-                end
-              end
-            end
-
-            -- Build the full variable path
-            local var_name = ""
-            for i, part in ipairs(path_parts) do
-              if part:match "^%[" then
-                var_name = var_name .. part
-              elseif i == 1 then
-                var_name = part
-              else
-                var_name = var_name .. "." .. part
-              end
-            end
-
-            if var_name == "" then
+            if not var_name or var_name == "" then
               vim.notify("Could not extract variable name", vim.log.levels.WARN)
               return
             end
 
             vim.notify("Evaluating " .. var_name .. ".String()", vim.log.levels.INFO)
-
-            local frame_id = nil
-            if session.current_frame then
-              frame_id = session.current_frame.id
-            end
 
             session:evaluate("call " .. var_name .. ".String()", function(err, resp)
               vim.schedule(function()
@@ -784,6 +789,19 @@ return {
               end)
             end)
           end, { buffer = ev.buf, silent = true, desc = "Evaluate .String()" })
+
+          -- Add variable under cursor (with full path) to watches
+          vim.keymap.set("n", "w", function()
+            local var_name = build_var_path_from_cursor()
+
+            if not var_name or var_name == "" then
+              vim.notify("Could not extract variable path", vim.log.levels.WARN)
+              return
+            end
+
+            require("dap-view").add_expr(var_name)
+            vim.notify("Added watch: " .. var_name, vim.log.levels.INFO)
+          end, { buffer = ev.buf, silent = true, desc = "Add variable path to watches" })
         end,
       })
 
