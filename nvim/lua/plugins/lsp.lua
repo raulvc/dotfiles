@@ -49,6 +49,7 @@ return {
           "ruby_lsp",
           "lemminx",
           "jdtls",
+          "groovyls",
         },
       }
     end,
@@ -439,6 +440,18 @@ return {
                 pattern = "pom.xml",
                 systemId = "https://maven.apache.org/xsd/maven-4.0.0.xsd",
               },
+            },
+          },
+        },
+      })
+
+      vim.lsp.config("groovyls", {
+        capabilities = capabilities,
+        filetypes = { "groovy" },
+        settings = {
+          groovy = {
+            format = {
+              enable = false,
             },
           },
         },

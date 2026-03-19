@@ -23,6 +23,7 @@ local options = {
     ruby = { "cookstyle" },
     java = { "google-java-format" },
     xml = { "xmlformat" },
+    groovy = { "npm-groovy-lint" },
   },
 
   formatters = {
@@ -78,6 +79,11 @@ local options = {
       command = "xmlformat",
       args = { "--indent", "2", "-" },
       stdin = true,
+    },
+    ["npm-groovy-lint"] = {
+      command = "npm-groovy-lint",
+      args = { "--format", "--files", "$FILENAME" },
+      stdin = false,
     },
     checkmake = {
       command = "checkmake",

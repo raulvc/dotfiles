@@ -147,6 +147,7 @@ return {
         "terraform",
         "ruby",
         "xml",
+        "groovy",
         "java",
         "python",
         "properties",

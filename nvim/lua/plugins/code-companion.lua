@@ -66,6 +66,7 @@ return {
                             },
                             "codecompanion.interactions.chat.slash_commands.builtin.buffer",
                             id,
+
                             {
                               bufnr = bufnr,
                               path = rel_path,
@@ -108,8 +109,9 @@ return {
                 },
                 schema = {
                   model = {
-                    default = "claude-opus-4-6-bedrock",
+                    default = "claude-opus-4-6-vertexai",
                     choices = {
+                      "glm-5-maas",
                       "claude-opus-4-6-bedrock",
                       "claude-opus-4-6-vertexai",
                       "claude-opus-4-5-20251101-v1",
