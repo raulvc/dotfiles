@@ -29,6 +29,36 @@ return {
       },
       "nvim-contrib/neotest-ginkgo",
       "mfussenegger/nvim-dap",
+      {
+        "rcasia/neotest-java",
+        ft = { "java", "kotlin" },
+        build = function()
+          -- Download JUnit Platform Console Standalone JAR directly
+          -- since :NeotestJava setup requires neotest to be initialized first
+          local version = "6.0.3"
+          local jar_dir = vim.fn.stdpath "data" .. "/neotest-java"
+          local jar_path = jar_dir .. "/junit-platform-console-standalone-" .. version .. ".jar"
+
+          if vim.fn.filereadable(jar_path) == 1 then
+            return
+          end
+
+          vim.fn.mkdir(jar_dir, "p")
+          local url = string.format(
+            "https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/%s/junit-platform-console-standalone-%s.jar",
+            version,
+            version
+          )
+          vim.notify("Downloading JUnit Platform Console Standalone " .. version .. "...", vim.log.levels.INFO)
+          vim.system({ "curl", "-fsSL", "-o", jar_path, url }):wait()
+
+          if vim.fn.filereadable(jar_path) == 1 then
+            vim.notify("JUnit Platform Console Standalone downloaded successfully", vim.log.levels.INFO)
+          else
+            vim.notify("Failed to download JUnit Platform Console Standalone JAR", vim.log.levels.ERROR)
+          end
+        end,
+      },
     },
 
     opts = function(_, opts)
@@ -219,6 +249,16 @@ return {
           return vim.fn.getcwd()
         end,
         root_dir = find_root { "package.json", ".git" },
+      }
+
+      -- Java/Kotlin: JUnit 4/5, TestNG, Kotest (via JUnit Platform runner)
+      opts.adapters["neotest-java"] = {
+        junit_jar = nil, -- auto-detected from Mason or project
+        -- Automatically detected from pom.xml / build.gradle; override if needed:
+        -- default_runner = "maven",  -- "maven" | "gradle"
+        -- Suppress ByteBuddy dynamic agent warning on Java 21+
+        jvm_args = { "-XX:+EnableDynamicAgentLoading" },
+        root_dir = find_root { "pom.xml", "build.gradle", "build.gradle.kts", ".git" },
       }
 
       -- Ginkgo: for BDD-style Go tests (must be listed BEFORE neotest-golang)
@@ -456,6 +496,8 @@ return {
           local ft = vim.bo.filetype
           if ft == "go" then
             require("dap-go").debug_test() -- use DAP-go for Go
+          elseif ft == "java" or ft == "kotlin" then
+            require("neotest").run.run { strategy = "dap" } -- use neotest-java DAP
           else
             require("neotest").run.run { strategy = "dap" } -- use neotest-DAP for others
           end

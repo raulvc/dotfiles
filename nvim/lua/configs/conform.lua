@@ -24,6 +24,7 @@ local options = {
     java = { "google-java-format" },
     xml = { "xmlformat" },
     groovy = { "npm-groovy-lint" },
+    kotlin = { "ktlint" },
   },
 
   formatters = {
@@ -85,6 +86,11 @@ local options = {
       args = { "--format", "--files", "$FILENAME" },
       stdin = false,
     },
+    ktlint = {
+      command = "ktlint",
+      args = { "--format", "$FILENAME" },
+      stdin = false,
+    },
     checkmake = {
       command = "checkmake",
       args = { "$FILENAME" },
@@ -98,11 +104,28 @@ local options = {
     -- },
   },
 
-  format_on_save = {
-    -- These options will be passed to conform.format()
-    timeout_ms = 2000,
-    lsp_format = "never",
-  },
+  format_on_save = function(bufnr)
+    -- Slow formatters (JVM-based) are handled async below
+    local slow_filetypes = { kotlin = true, java = true, groovy = true }
+    if slow_filetypes[vim.bo[bufnr].filetype] then
+      return nil
+    end
+    return {
+      timeout_ms = 2000,
+      lsp_format = "never",
+    }
+  end,
+
+  format_after_save = function(bufnr)
+    local slow_filetypes = { kotlin = true, java = true, groovy = true }
+    if not slow_filetypes[vim.bo[bufnr].filetype] then
+      return nil
+    end
+    return {
+      timeout_ms = 60000, -- 60s for JVM cold-start formatters
+      lsp_format = "never",
+    }
+  end,
 }
 
 return options

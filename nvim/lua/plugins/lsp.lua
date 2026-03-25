@@ -61,6 +61,29 @@ return {
       local capabilities = require("blink.cmp").get_lsp_capabilities()
       local builtin = require "telescope.builtin"
 
+      -- Fix: "Cursor position outside buffer" when navigating to external files
+      -- (e.g. decompiled .class files from Kotlin LSP with custom URI schemes)
+      -- The LSP may return positions beyond the buffer's current line count when
+      -- content is loaded asynchronously. We patch nvim_win_set_cursor to clamp.
+      local original_win_set_cursor = vim.api.nvim_win_set_cursor
+      ---@diagnostic disable-next-line: duplicate-set-field
+      vim.api.nvim_win_set_cursor = function(win, pos)
+        local row, col = pos[1], pos[2]
+        local ok, bufnr = pcall(vim.api.nvim_win_get_buf, win)
+        if ok and bufnr then
+          -- Try to load the buffer if it isn't loaded yet
+          if not vim.api.nvim_buf_is_loaded(bufnr) then
+            vim.fn.bufload(bufnr)
+          end
+          local line_count = vim.api.nvim_buf_line_count(bufnr)
+          if row > line_count then
+            row = math.max(1, line_count)
+            col = 0
+          end
+        end
+        return original_win_set_cursor(win, { row, col })
+      end
+
       -- Configure servers using vim.lsp.config (Neovim 0.11+)
       vim.lsp.config("lua_ls", {
         capabilities = capabilities,
@@ -217,6 +240,54 @@ return {
 
       vim.lsp.config("kotlin_lsp", {
         capabilities = capabilities,
+        root_markers = {
+          "settings.gradle",
+          "settings.gradle.kts",
+          "build.gradle",
+          "build.gradle.kts",
+          "pom.xml",
+          ".git",
+        },
+        init_options = {
+          storagePath = vim.fn.stdpath "cache" .. "/kotlin-language-server",
+        },
+        settings = {
+          kotlin = {
+            compiler = {
+              jvm = {
+                target = "17",
+              },
+            },
+            completion = {
+              snippets = {
+                enabled = true,
+              },
+            },
+            linting = {
+              debounceTime = 250,
+            },
+            hints = {
+              typeHints = true,
+              parameterHints = true,
+              chainingHints = true,
+            },
+            formatting = {
+              -- Disable if using ktlint/ktfmt via conform.nvim
+              enabled = false,
+            },
+            indexing = {
+              enabled = true,
+            },
+            externalSources = {
+              useKlsScheme = true,
+              autoConvertToKotlin = true,
+            },
+            debugAdapter = {
+              enabled = true,
+              path = "",
+            },
+          },
+        },
       })
 
       vim.lsp.config("jsonls", {
@@ -501,9 +572,27 @@ return {
       end, { expr = true, desc = "[R]e[n]ame" })
       -- vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "[C]ode [A]ctions" })
       vim.keymap.set("n", "<C-q>", vim.lsp.buf.hover, { desc = "Hover Documentation" })
-      vim.keymap.set("n", "<M-r>", builtin.lsp_references, { desc = "[G]oto [R]eferences" })
-      vim.keymap.set("n", "<M-g>", builtin.lsp_implementations, { desc = "[G]oto [I]mplementation" })
-      vim.keymap.set("n", "<M-d>", builtin.lsp_definitions, { desc = "[G]oto [D]efinition" })
+      local function lsp_picker_with_symbol_hl(picker_fn)
+        return function()
+          local symbol = vim.fn.expand "<cword>"
+          local previewer_factory = _G._telescope_make_lsp_symbol_previewer
+          local winbar_wrapper = _G._telescope_with_preview_winbar
+          local opts = {}
+          if symbol and symbol ~= "" and previewer_factory and winbar_wrapper then
+            opts.previewer = winbar_wrapper(previewer_factory(symbol)) {}
+          end
+          picker_fn(opts)
+        end
+      end
+
+      vim.keymap.set("n", "<M-r>", lsp_picker_with_symbol_hl(builtin.lsp_references), { desc = "[G]oto [R]eferences" })
+      vim.keymap.set(
+        "n",
+        "<M-g>",
+        lsp_picker_with_symbol_hl(builtin.lsp_implementations),
+        { desc = "[G]oto [I]mplementation" }
+      )
+      vim.keymap.set("n", "<M-d>", lsp_picker_with_symbol_hl(builtin.lsp_definitions), { desc = "[G]oto [D]efinition" })
     end,
   },
   {

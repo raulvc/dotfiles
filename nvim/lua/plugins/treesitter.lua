@@ -151,6 +151,7 @@ return {
         "java",
         "python",
         "properties",
+        "kotlin",
       }
 
       vim.defer_fn(function()
@@ -197,6 +198,13 @@ return {
         pattern = "*.cql",
         callback = function()
           vim.bo.filetype = "sql"
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        pattern = "*.gradle.kts",
+        callback = function()
+          vim.bo.filetype = "kotlin"
         end,
       })
 

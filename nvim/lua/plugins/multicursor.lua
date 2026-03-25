@@ -10,6 +10,88 @@ return {
       updatetime = 100,
     }
 
+    -- Distributed paste: paste clipboard lines across cursors 1:1
+    local function get_system_clipboard()
+      -- Try reading directly from OS clipboard tools
+      local ok, result
+      -- Wayland
+      ok, result = pcall(vim.fn.system, "wl-paste --no-newline 2>/dev/null")
+      if ok and vim.v.shell_error == 0 and result and result ~= "" then
+        return result
+      end
+      -- X11
+      ok, result = pcall(vim.fn.system, "xclip -selection clipboard -o 2>/dev/null")
+      if ok and vim.v.shell_error == 0 and result and result ~= "" then
+        return result
+      end
+      ok, result = pcall(vim.fn.system, "xsel --clipboard --output 2>/dev/null")
+      if ok and vim.v.shell_error == 0 and result and result ~= "" then
+        return result
+      end
+      -- Fallback to Neovim registers
+      local reg = vim.fn.getreg "+"
+      if reg and reg ~= "" then
+        return reg
+      end
+      return vim.fn.getreg '"'
+    end
+
+    local function distributed_paste(paste_after)
+      local clipboard = get_system_clipboard()
+      if not clipboard or clipboard == "" then
+        return
+      end
+
+      local clip_lines = vim.split(clipboard, "\n", { plain = true })
+      -- Remove trailing empty line (vim registers often have one)
+      if clip_lines[#clip_lines] == "" then
+        table.remove(clip_lines)
+      end
+
+      local cursor_count = mc.numCursors()
+
+      if #clip_lines == cursor_count then
+        -- Distribute one line per cursor
+        local i = 0
+        mc.action(function()
+          i = i + 1
+          local line = clip_lines[i] or ""
+          vim.fn.setreg('"', line, "c") -- "c" = characterwise
+          if paste_after then
+            vim.cmd 'normal! ""p'
+          else
+            vim.cmd 'normal! ""P'
+          end
+        end)
+      else
+        -- Line count doesn't match cursor count, paste full clipboard at each cursor
+        mc.action(function()
+          vim.fn.setreg('"', clipboard, "c")
+          if paste_after then
+            vim.cmd 'normal! ""p'
+          else
+            vim.cmd 'normal! ""P'
+          end
+        end)
+      end
+    end
+
+    vim.keymap.set("n", "p", function()
+      if mc.hasCursors() then
+        distributed_paste(true)
+      else
+        vim.cmd 'normal! "+p'
+      end
+    end, { desc = "Smart paste (distributed in multicursor)" })
+
+    vim.keymap.set("n", "P", function()
+      if mc.hasCursors() then
+        distributed_paste(false)
+      else
+        vim.cmd 'normal! "+P'
+      end
+    end, { desc = "Smart Paste before (distributed in multicursor)" })
+
     -- Clone caret mappings
     vim.keymap.set({ "n", "v" }, "<M-S-Up>", function()
       mc.lineAddCursor(-1)

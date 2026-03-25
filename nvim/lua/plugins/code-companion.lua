@@ -12,7 +12,9 @@ return {
     },
     config = function()
       require("codecompanion").setup {
-        log_level = "DEBUG",
+        opts = {
+          log_level = "DEBUG",
+        },
 
         display = {
           action_palette = {
@@ -32,7 +34,18 @@ return {
           },
         },
 
-        strategies = {
+        interactions = {
+          shared = {
+            keymaps = {
+              accept_change = {
+                modes = { n = "ga" },
+                description = "Accept the suggested change",
+              },
+              accept_all_changes = {
+                modes = { n = "gA" },
+              },
+            },
+          },
           chat = {
             adapter = "genplat",
             slash_commands = {

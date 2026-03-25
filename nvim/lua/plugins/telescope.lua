@@ -21,6 +21,37 @@ return {
 
       -- Fast test file detection using plain string.find (no regex overhead)
       local test_file_hl = "TelescopeTestFile"
+      local doc_file_hl = "TelescopeDocFile"
+      local static_file_hl = "TelescopeStaticFile"
+      local function is_static_file(filename)
+        if not filename then
+          return false
+        end
+        return filename:find "%.json$"
+          or filename:find "%.ya?ml$"
+          or filename:find "%.toml$"
+          or filename:find "%.xml$"
+          or filename:find "%.csv$"
+          or filename:find "%.tsv$"
+          or filename:find("%.env", 1, true)
+          or filename:find "%.avsc$"
+      end
+
+      local function is_doc_file(filename)
+        if not filename then
+          return false
+        end
+        return filename:find "%.md$"
+          or filename:find "%.mdx$"
+          or filename:find "%.txt$"
+          or filename:find "%.rst$"
+          or filename:find "%.adoc$"
+          or filename:find("README", 1, true)
+          or filename:find("CHANGELOG", 1, true)
+          or filename:find("LICENSE", 1, true)
+          or filename:find("CONTRIBUTING", 1, true)
+      end
+
       local function is_test_file(filename)
         if not filename then
           return false
@@ -34,29 +65,46 @@ return {
           or filename:find("Mock", 1, true)
       end
 
-      -- Generic factory: wraps any entry maker to highlight test files
+      -- Generic factory: wraps any entry maker to highlight test/doc/static files
+      -- Returns a function that lazily initializes the underlying maker on first call,
+      -- so it can be assigned directly to entry_maker (Telescope calls it with raw entries).
       local function wrap_entry_maker_with_test_hl(make_original)
-        return function()
-          local original_maker = make_original()
+        return function(opts)
+          local original_maker = nil
           return function(entry)
+            if not original_maker then
+              original_maker = make_original(opts)
+            end
             local made = original_maker(entry)
             if not made then
               return nil
             end
             local fname = made.filename or made.value
-            if not fname or not is_test_file(fname) then
+            if not fname then
               return made
             end
-            local original_display = made.display
-            if type(original_display) == "function" then
-              made.display = function(e)
-                local text, existing_hl = original_display(e)
-                if type(text) == "table" then
-                  return text
+            local hl_group
+            if is_test_file(fname) then
+              hl_group = test_file_hl
+            elseif is_doc_file(fname) then
+              hl_group = doc_file_hl
+            elseif is_static_file(fname) then
+              hl_group = static_file_hl
+            end
+            if hl_group then
+              made._file_hl_group = hl_group
+              -- Wrap display to apply line highlight via display_highlights
+              local orig_display = made.display
+              made.display = function(m)
+                if type(orig_display) == "function" then
+                  local text, highlights = orig_display(m)
+                  highlights = highlights or {}
+                  table.insert(highlights, 1, { { 0, #text }, hl_group })
+                  return text, highlights
+                elseif type(orig_display) == "string" then
+                  return orig_display, { { { 0, #orig_display }, hl_group } }
                 end
-                local hl = existing_hl or {}
-                hl[#hl + 1] = { { 0, #text }, test_file_hl }
-                return text, hl
+                return orig_display, {}
               end
             end
             return made
@@ -64,16 +112,16 @@ return {
         end
       end
 
-      local make_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function()
-        return require("telescope.make_entry").gen_from_vimgrep()
+      local make_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function(opts)
+        return require("telescope.make_entry").gen_from_vimgrep(opts)
       end)
 
-      local make_file_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function()
-        return require("telescope.make_entry").gen_from_file()
+      local make_file_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function(opts)
+        return require("telescope.make_entry").gen_from_file(opts)
       end)
 
-      local make_lsp_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function()
-        return require("telescope.make_entry").gen_from_quickfix()
+      local make_lsp_entry_with_test_highlight = wrap_entry_maker_with_test_hl(function(opts)
+        return require("telescope.make_entry").gen_from_quickfix(opts)
       end)
 
       local function is_file_entry(entry)
@@ -101,8 +149,25 @@ return {
           return
         end
 
-        -- Multi-selection or non-file - use default action
-        if (multi and #multi > 0) or not is_file_entry(selection) then
+        -- Multi-selection: open each selected file in a new tab
+        if multi and #multi > 0 then
+          actions.close(prompt_bufnr)
+          vim.schedule(function()
+            for _, entry in ipairs(multi) do
+              local file_path = entry.filename or entry.path
+              if file_path then
+                vim.cmd("tabedit " .. vim.fn.fnameescape(file_path))
+                if entry.lnum then
+                  pcall(vim.api.nvim_win_set_cursor, 0, { entry.lnum, math.max(0, (entry.col or 1) - 1) })
+                end
+              end
+            end
+          end)
+          return
+        end
+
+        -- Non-file entry - use default action
+        if not is_file_entry(selection) then
           pcall(actions.select_default, prompt_bufnr)
           return
         end
@@ -189,17 +254,17 @@ return {
           if is_test_file(fname) then
             return "TelescopeTestFile"
           end
-          -- Config files
-          if fname:match "%.json$" or fname:match "%.ya?ml$" or fname:match "%.toml$" then
-            return "String"
+          -- Static/config files
+          if is_static_file(fname) then
+            return static_file_hl
           end
           -- Go files
           if fname:match "%.go$" then
             return "Function"
           end
           -- Doc files
-          if fname:match "%.md$" or fname:match "%.txt$" then
-            return "Special"
+          if is_doc_file(fname) then
+            return doc_file_hl
           end
           return "TelescopeResultsIdentifier"
         end
@@ -225,6 +290,7 @@ return {
           icon_hl = icon_hl or "DevIconDefault"
 
           local filename_hl = get_filename_hl(filename)
+          local is_special = filename_hl == test_file_hl or filename_hl == doc_file_hl or filename_hl == static_file_hl
 
           -- Pre-compute lengths
           local indent_len = #tree_indent
@@ -235,6 +301,12 @@ return {
 
           -- Build highlights array once
           local highlights = {}
+
+          -- For test/doc files, apply the highlight across the entire row first
+          if is_special then
+            highlights[#highlights + 1] = { { 0, #display_str }, filename_hl }
+          end
+
           local pos = 0
 
           if indent_len > 0 then
@@ -250,7 +322,9 @@ return {
           end
           pos = pos + dir_len
 
-          highlights[#highlights + 1] = { { pos, #display_str }, filename_hl }
+          if not is_special then
+            highlights[#highlights + 1] = { { pos, #display_str }, filename_hl }
+          end
 
           -- Return pre-computed display
           base_entry.display = function()
@@ -263,6 +337,216 @@ return {
 
       local previewers = require "telescope.previewers"
       local ns_pathbar = vim.api.nvim_create_namespace "TelescopePathBarNS"
+      local ns_grep_match = vim.api.nvim_create_namespace "TelescopeGrepMatchHL"
+
+      -- Apply grep match highlights to a preview buffer
+      local function apply_grep_match_highlights(bufnr, prompt_bufnr)
+        if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+          return
+        end
+        local picker = action_state.get_current_picker(prompt_bufnr)
+        if not picker then
+          return
+        end
+        local prompt = picker:_get_prompt()
+        if not prompt or prompt == "" then
+          return
+        end
+
+        vim.api.nvim_buf_clear_namespace(bufnr, ns_grep_match, 0, -1)
+
+        local has_upper = prompt:find "%u"
+        local search_pat = has_upper and prompt or prompt:lower()
+        local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+        for lnum, line in ipairs(lines) do
+          local search_line = has_upper and line or line:lower()
+          local start = 1
+          while true do
+            local s, e = search_line:find(search_pat, start, true)
+            if not s then
+              break
+            end
+            pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_grep_match, lnum - 1, s - 1, {
+              end_col = e,
+              hl_group = "TelescopePreviewMatch",
+              priority = 300,
+              hl_mode = "combine",
+            })
+            start = e + 1
+          end
+        end
+      end
+
+      -- Factory: creates an LSP previewer that highlights a given symbol in the preview
+      local function make_lsp_symbol_previewer(symbol)
+        return function(opts)
+          local base = previewers.vim_buffer_qflist.new(opts)
+          local orig_preview = base.preview
+          local orig_teardown = base.teardown
+          local last_attached_buf = nil
+
+          base.preview = function(self, entry, status)
+            local ret = orig_preview(self, entry, status)
+
+            if not symbol or symbol == "" then
+              return ret
+            end
+
+            vim.schedule(function()
+              local winid = status and status.preview_win
+              if not winid or not vim.api.nvim_win_is_valid(winid) then
+                return
+              end
+              local bufnr = vim.api.nvim_win_get_buf(winid)
+              if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+                return
+              end
+
+              local function apply_symbol_highlights(buf)
+                if not buf or not vim.api.nvim_buf_is_valid(buf) then
+                  return
+                end
+                vim.api.nvim_buf_clear_namespace(buf, ns_grep_match, 0, -1)
+                local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+                for lnum, line in ipairs(lines) do
+                  local start = 1
+                  while true do
+                    local s, e = line:find(symbol, start, true)
+                    if not s then
+                      break
+                    end
+                    pcall(vim.api.nvim_buf_set_extmark, buf, ns_grep_match, lnum - 1, s - 1, {
+                      end_col = e,
+                      hl_group = "TelescopePreviewMatch",
+                      priority = 300,
+                      hl_mode = "combine",
+                    })
+                    start = e + 1
+                  end
+                end
+              end
+
+              local line_count = vim.api.nvim_buf_line_count(bufnr)
+              if line_count > 1 or (line_count == 1 and vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1] ~= "") then
+                apply_symbol_highlights(bufnr)
+              end
+
+              if last_attached_buf ~= bufnr then
+                last_attached_buf = bufnr
+                local applied = false
+                vim.api.nvim_buf_attach(bufnr, false, {
+                  on_lines = function(_, attached_buf)
+                    if applied then
+                      return true
+                    end
+                    if not vim.api.nvim_buf_is_valid(attached_buf) then
+                      return true
+                    end
+                    applied = true
+                    vim.schedule(function()
+                      apply_symbol_highlights(attached_buf)
+                    end)
+                    return true
+                  end,
+                })
+              end
+
+              vim.defer_fn(function()
+                if vim.api.nvim_buf_is_valid(bufnr) then
+                  apply_symbol_highlights(bufnr)
+                end
+              end, 80)
+            end)
+
+            return ret
+          end
+
+          base.teardown = function(self)
+            last_attached_buf = nil
+            local bufnr2 = self.state and self.state.bufnr
+            if bufnr2 and vim.api.nvim_buf_is_valid(bufnr2) then
+              pcall(vim.api.nvim_buf_clear_namespace, bufnr2, ns_grep_match, 0, -1)
+            end
+            if orig_teardown then
+              return orig_teardown(self)
+            end
+          end
+
+          return base
+        end
+      end
+
+      -- Custom grep previewer that highlights all matches of the search pattern
+      local function grep_previewer_with_match_hl(opts)
+        local base = previewers.vim_buffer_vimgrep.new(opts)
+        local orig_preview = base.preview
+        local orig_teardown = base.teardown
+        local last_attached_buf = nil
+
+        base.preview = function(self, entry, status)
+          local ret = orig_preview(self, entry, status)
+
+          vim.schedule(function()
+            local winid = status and status.preview_win
+            if not winid or not vim.api.nvim_win_is_valid(winid) then
+              return
+            end
+            local bufnr = vim.api.nvim_win_get_buf(winid)
+            if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+              return
+            end
+
+            -- Try immediately in case content is already loaded
+            local line_count = vim.api.nvim_buf_line_count(bufnr)
+            if line_count > 1 or (line_count == 1 and vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1] ~= "") then
+              apply_grep_match_highlights(bufnr, status.prompt_bufnr)
+            end
+
+            -- Attach to buffer to catch async content loading
+            if last_attached_buf ~= bufnr then
+              last_attached_buf = bufnr
+              local applied = false
+              vim.api.nvim_buf_attach(bufnr, false, {
+                on_lines = function(_, attached_buf)
+                  if applied then
+                    return true -- detach
+                  end
+                  if not vim.api.nvim_buf_is_valid(attached_buf) then
+                    return true -- detach
+                  end
+                  applied = true
+                  vim.schedule(function()
+                    apply_grep_match_highlights(attached_buf, status.prompt_bufnr)
+                  end)
+                  return true -- detach after first application
+                end,
+              })
+            end
+
+            -- Fallback: re-apply after a short delay to catch treesitter redraws
+            vim.defer_fn(function()
+              if vim.api.nvim_buf_is_valid(bufnr) then
+                apply_grep_match_highlights(bufnr, status.prompt_bufnr)
+              end
+            end, 80)
+          end)
+
+          return ret
+        end
+
+        base.teardown = function(self)
+          last_attached_buf = nil
+          local bufnr2 = self.state and self.state.bufnr
+          if bufnr2 and vim.api.nvim_buf_is_valid(bufnr2) then
+            pcall(vim.api.nvim_buf_clear_namespace, bufnr2, ns_grep_match, 0, -1)
+          end
+          if orig_teardown then
+            return orig_teardown(self)
+          end
+        end
+
+        return base
+      end
 
       local function with_preview_winbar(new_previewer)
         return function(opts)
@@ -446,12 +730,12 @@ return {
               ["q"] = actions.close,
               ["<Esc>"] = actions.close,
               ["<CR>"] = smart_open_file,
-              ["<C-h>"] = toggle_no_ignore, -- Toggle hidden/ignored files
+              ["<kEnter>"] = smart_open_file,
             },
             i = {
               ["<Esc>"] = actions.close,
               ["<CR>"] = smart_open_file,
-              ["<C-h>"] = toggle_no_ignore, -- Toggle hidden/ignored files
+              ["<kEnter>"] = smart_open_file,
               ["<C-Down>"] = require("telescope.actions").cycle_history_next,
               ["<C-Up>"] = require("telescope.actions").cycle_history_prev,
             },
@@ -464,6 +748,12 @@ return {
         pickers = {
           live_grep = {
             entry_maker = make_entry_with_test_highlight(),
+            previewer = with_preview_winbar(grep_previewer_with_match_hl) {},
+            attach_mappings = function(prompt_bufnr, map)
+              map("i", "<C-h>", toggle_no_ignore)
+              map("n", "<C-h>", toggle_no_ignore)
+              return true
+            end,
             layout_config = {
               preview_width = 0.7, -- Slightly smaller for grep to see more results
             },
@@ -471,7 +761,7 @@ return {
           find_files = {
             entry_maker = make_tree_entry_for_files(),
             hidden = true,
-            no_ignore = true,
+            no_ignore = false,
             find_command = {
               "fd",
               "--type",
@@ -593,6 +883,10 @@ return {
           },
         },
       }
+
+      -- Expose for use in LSP keymaps
+      _G._telescope_make_lsp_symbol_previewer = make_lsp_symbol_previewer
+      _G._telescope_with_preview_winbar = with_preview_winbar
 
       require("telescope").load_extension "ui-select"
       require("telescope").load_extension "fzf"
@@ -799,6 +1093,8 @@ return {
             map("n", "<Tab>", toggle_selection)
             map("i", "<CR>", confirm_selection)
             map("n", "<CR>", confirm_selection)
+            map("i", "<kEnter>", confirm_selection)
+            map("n", "<kEnter>", confirm_selection)
             map("i", "<Esc>", close_picker)
             map("n", "<Esc>", close_picker)
             map("n", "q", close_picker)

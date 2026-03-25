@@ -115,5 +115,16 @@ return function(_, opts)
     return {}
   end
 
-  require("neotest").setup(opts)
+  -- Filter out any invalid buffers before neotest scans them
+  -- to avoid "Invalid buffer id" errors in _update_open_buf_positions
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if not vim.api.nvim_buf_is_valid(buf) then
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    end
+  end
+
+  local ok, err = pcall(require("neotest").setup, opts)
+  if not ok then
+    vim.notify("Neotest setup failed: " .. tostring(err), vim.log.levels.WARN)
+  end
 end

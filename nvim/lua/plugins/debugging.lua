@@ -235,7 +235,7 @@ return {
           "mason-org/mason.nvim",
         },
         opts = {
-          ensure_installed = { "delve" },
+          ensure_installed = { "delve", "java-debug-adapter", "kotlin-debug-adapter" },
           automatic_installation = true,
         },
       },
@@ -888,6 +888,75 @@ return {
       }
 
       dap.configurations.javascript = dap.configurations.typescript
+
+      -- Java DAP adapter (java-debug-adapter installed via Mason)
+      dap.adapters.java = function(callback, config)
+        local port = config.port or get_unused_port()
+        local java_debug_jar = vim.fn.glob(
+          vim.fn.stdpath "data"
+            .. "/mason/packages/java-debug-adapter/extension/server/com.microsoft.java.debug.plugin-*.jar"
+        )
+
+        if java_debug_jar == "" then
+          vim.notify("java-debug-adapter not found. Install via :MasonInstall java-debug-adapter", vim.log.levels.ERROR)
+          return
+        end
+
+        callback {
+          type = "server",
+          host = "127.0.0.1",
+          port = port,
+          enrich_config = function(final_config, on_config)
+            -- If using nvim-jdtls, it handles starting the debug adapter
+            on_config(final_config)
+          end,
+        }
+      end
+
+      dap.configurations.java = {
+        {
+          type = "java",
+          request = "launch",
+          name = "Launch Java Test (current file)",
+          mainClass = "",
+          projectName = "",
+          cwd = "${workspaceFolder}",
+        },
+        {
+          type = "java",
+          request = "attach",
+          name = "Attach to Java process",
+          hostName = "127.0.0.1",
+          port = 5005,
+        },
+      }
+
+      -- Kotlin DAP adapter (kotlin-debug-adapter installed via Mason)
+      dap.adapters.kotlin = {
+        type = "executable",
+        command = vim.fn.stdpath "data" .. "/mason/packages/kotlin-debug-adapter/bin/kotlin-debug-adapter",
+        options = {
+          auto_continue_if_many_stopped = false,
+        },
+      }
+
+      dap.configurations.kotlin = {
+        {
+          type = "kotlin",
+          request = "launch",
+          name = "Launch Kotlin Test",
+          projectRoot = "${workspaceFolder}",
+          mainClass = "",
+        },
+        {
+          type = "kotlin",
+          request = "attach",
+          name = "Attach to Kotlin process",
+          hostName = "127.0.0.1",
+          port = 5005,
+          timeout = 10000,
+        },
+      }
     end,
   },
 }

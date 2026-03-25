@@ -77,6 +77,13 @@ return {
             TelescopePreviewBorder = { bg = theme.ui.bg, fg = theme.ui.bg_p1 },
             TelescopePreviewTitle = { bg = palette.autumnGreen, fg = theme.ui.bg, bold = true },
             TelescopePreviewLine = { bg = theme.ui.bg_p1 },
+            TelescopePreviewMatch = {
+              fg = palette.surimiOrange,
+              bg = "#2d1f11",
+              bold = true,
+              underline = true,
+              sp = palette.surimiOrange,
+            },
             TelescopeSelection = { bg = theme.ui.bg_p2, fg = theme.ui.fg, bold = true },
             TelescopeSelectionCaret = { bg = theme.ui.bg_p2, fg = palette.crystalBlue, bold = true },
             TelescopeMultiSelection = { fg = palette.waveAqua1, bold = true },
@@ -86,6 +93,8 @@ return {
             TelescopeResultsIdentifier = { fg = palette.crystalBlue },
             TelescopeTreeIndent = { fg = theme.ui.nontext },
             TelescopeTestFile = { bg = palette.winterGreen, fg = palette.springGreen },
+            TelescopeDocFile = { bg = "#2b2620", fg = palette.autumnYellow },
+            TelescopeStaticFile = { bg = "#1e2430", fg = palette.dragonBlue },
             TelescopePathBar = { bg = palette.winterYellow, fg = palette.carpYellow, bold = true },
             TelescopePathBarSep = { bg = theme.ui.bg, fg = palette.winterYellow },
 
