@@ -1,15 +1,15 @@
+-- Global re-entry guard to prevent double-formatting
+-- (keyed by bufnr, cleared after formatting completes)
+local _formatting_guard = {}
+
 local options = {
   formatters_by_ft = {
     lua = { "stylua" },
     python = { "isort", "black", "autoflake", "docformatter" },
-    -- You can customize some of the format options for the filetype (:help conform.format)
     rust = { "rustfmt" },
     go = { "gofumpt" },
-    -- Conform will run the first available formatter
     javascript = { "prettierd" },
     typescript = { "prettierd" },
-    -- css = { "prettier" },
-    -- html = { "prettier" },
     sh = { "shfmt" },
     bash = { "shfmt" },
     json = { "fixjson" },
@@ -34,21 +34,19 @@ local options = {
     yamlfmt = {
       args = { "-formatter", "indent=2,retain_line_breaks=true" },
     },
-    -- Enhanced black configuration
     black = {
       prepend_args = {
         "--line-length",
-        "88", -- Default is 88, adjust if needed
+        "88",
         "--target-version",
-        "py39", -- Adjust to your Python version
-        "--preview", -- Enable preview features (optional)
+        "py39",
+        "--preview",
       },
     },
-    -- Enhanced isort configuration
     isort = {
       prepend_args = {
         "--profile",
-        "black", -- Make isort compatible with black
+        "black",
         "--line-length",
         "88",
         "--multi-line",
@@ -56,17 +54,14 @@ local options = {
         "--trailing-comma",
       },
     },
-    -- Hadolint for Dockerfile linting/formatting
     hadolint = {
       command = "hadolint",
       args = { "--no-color", "$FILENAME" },
     },
-    -- Buf for Protocol Buffers formatting
     buf = {
       command = "buf",
       args = { "format", "-w", "$FILENAME" },
     },
-    -- Terraform fmt for HCL files
     terraform_fmt = {
       command = "terraform",
       args = { "fmt", "-" },
@@ -74,11 +69,12 @@ local options = {
     },
     ["google-java-format"] = {
       command = "google-java-format",
+      args = { "--aosp", "-" },
       stdin = true,
     },
     xmlformat = {
       command = "xmlformat",
-      args = { "--indent", "2", "-" },
+      args = { "--indent", "4", "-" },
       stdin = true,
     },
     ["npm-groovy-lint"] = {
@@ -96,19 +92,24 @@ local options = {
       args = { "$FILENAME" },
       stdin = false,
     },
-
-    -- cookstyle = {
-    --   command = "cookstyle",
-    --   args = { "--autocorrect", "--format", "quiet", "--stdin", "$FILENAME" },
-    --   stdin = true,
-    -- },
   },
 
   format_on_save = function(bufnr)
-    -- Slow formatters (JVM-based) are handled async below
+    -- Re-entry guard: if already formatting this buffer, skip
+    if _formatting_guard[bufnr] then
+      return nil
+    end
+    _formatting_guard[bufnr] = true
+    vim.defer_fn(function()
+      _formatting_guard[bufnr] = nil
+    end, 5000)
+
     local slow_filetypes = { kotlin = true, java = true, groovy = true }
     if slow_filetypes[vim.bo[bufnr].filetype] then
-      return nil
+      return {
+        timeout_ms = 30000,
+        lsp_format = "never",
+      }
     end
     return {
       timeout_ms = 2000,
@@ -116,16 +117,7 @@ local options = {
     }
   end,
 
-  format_after_save = function(bufnr)
-    local slow_filetypes = { kotlin = true, java = true, groovy = true }
-    if not slow_filetypes[vim.bo[bufnr].filetype] then
-      return nil
-    end
-    return {
-      timeout_ms = 60000, -- 60s for JVM cold-start formatters
-      lsp_format = "never",
-    }
-  end,
+  notify_on_error = true,
 }
 
 return options

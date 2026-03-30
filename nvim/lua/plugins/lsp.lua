@@ -84,6 +84,62 @@ return {
         return original_win_set_cursor(win, { row, col })
       end
 
+      -- Track user-initiated buffer modifications so we can distinguish
+      -- user edits from LSP-pushed edits in format_on_save
+      vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+        callback = function(args)
+          local dominated_fts = { kotlin = true, java = true, groovy = true }
+          if dominated_fts[vim.bo[args.buf].filetype] then
+            vim.b[args.buf]._user_modified = true
+          end
+        end,
+      })
+
+      -- Block unsolicited workspace/applyEdit from jdtls on Java buffers
+      -- jdtls pushes import reorganization edits asynchronously after indexing,
+      -- which conflicts with conform's google-java-format on save.
+      -- Block jdtls from responding to willSaveWaitUntil (pre-save edits)
+      local orig_will_save = vim.lsp.handlers["textDocument/willSaveWaitUntil"]
+      vim.lsp.handlers["textDocument/willSaveWaitUntil"] = function(err, result, ctx, config)
+        local client = vim.lsp.get_client_by_id(ctx.client_id)
+        if client and client.name == "jdtls" then
+          return nil
+        end
+        if orig_will_save then
+          return orig_will_save(err, result, ctx, config)
+        end
+      end
+
+      local orig_apply = vim.lsp.handlers["workspace/applyEdit"]
+      vim.lsp.handlers["workspace/applyEdit"] = function(err, result, ctx, config)
+        local client = vim.lsp.get_client_by_id(ctx.client_id)
+        if client and client.name == "jdtls" then
+          local label = result and result.label or ""
+          -- Allow only explicitly user-triggered edits (rename, extract, etc.)
+          local allowed = {
+            "rename",
+            "extract",
+            "inline",
+            "move",
+            "generate",
+            "override",
+            "implement",
+            "delegate",
+          }
+          local dominated = true
+          for _, keyword in ipairs(allowed) do
+            if label:lower():find(keyword) then
+              dominated = false
+              break
+            end
+          end
+          if dominated then
+            return { applied = false }
+          end
+        end
+        return orig_apply(err, result, ctx, config)
+      end
+
       -- Configure servers using vim.lsp.config (Neovim 0.11+)
       vim.lsp.config("lua_ls", {
         capabilities = capabilities,
@@ -537,7 +593,10 @@ return {
         },
         settings = {
           java = {
-            format = { enabled = false },
+            format = {
+              enabled = false,
+              onType = { enabled = false },
+            },
             signatureHelp = { enabled = true },
             contentProvider = { preferred = "fernflower" },
             completion = {
@@ -557,8 +616,61 @@ return {
                 staticStarThreshold = 9999,
               },
             },
+            saveActions = {
+              organizeImports = false,
+            },
+            autobuild = { enabled = true },
+            cleanup = {
+              actionsOnSave = {},
+            },
+            codeGeneration = {
+              toString = {
+                template = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
+              },
+            },
+            edit = {
+              validateAllOpenBuffersOnChanges = false,
+            },
           },
         },
+      })
+
+      -- Disable LSP formatting and save actions for filetypes where conform is the sole formatter
+      vim.api.nvim_create_autocmd("LspAttach", {
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          if not client then
+            return
+          end
+
+          -- For jdtls specifically, aggressively disable all formatting/edit capabilities
+          if client.name == "jdtls" then
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+            client.server_capabilities.documentOnTypeFormattingProvider = nil
+            if client.server_capabilities.textDocumentSync then
+              if type(client.server_capabilities.textDocumentSync) == "table" then
+                client.server_capabilities.textDocumentSync.willSaveWaitUntil = false
+                client.server_capabilities.textDocumentSync.willSave = false
+              elseif type(client.server_capabilities.textDocumentSync) == "number" then
+                client.server_capabilities.textDocumentSync = 0 -- None
+              end
+            end
+            return
+          end
+
+          local dominated_fts = { kotlin = true, groovy = true }
+          if dominated_fts[vim.bo[args.buf].filetype] then
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+            if client.server_capabilities.textDocumentSync then
+              if type(client.server_capabilities.textDocumentSync) == "table" then
+                client.server_capabilities.textDocumentSync.willSaveWaitUntil = false
+                client.server_capabilities.textDocumentSync.willSave = false
+              end
+            end
+          end
+        end,
       })
 
       -- Keymappings with improved workspace symbols

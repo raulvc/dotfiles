@@ -224,6 +224,7 @@ return {
             "terraform",
             "tf",
             "hcl",
+            "xml",
           } -- Add filetypes that should use default indentation
 
           if hasStarted and not vim.list_contains(noIndent, ctx.match) then
