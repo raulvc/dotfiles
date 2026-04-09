@@ -294,6 +294,9 @@ return {
         },
       })
 
+      local kotlin_lsp_dir = vim.fn.expand "~/.local/share/nvim/mason/packages/kotlin-lsp"
+      local kotlin_jre = kotlin_lsp_dir .. "/jre/bin/java"
+
       vim.lsp.config("kotlin_lsp", {
         capabilities = capabilities,
         root_markers = {
@@ -306,6 +309,83 @@ return {
         },
         init_options = {
           storagePath = vim.fn.stdpath "cache" .. "/kotlin-language-server",
+        },
+        cmd = {
+          kotlin_jre,
+          -- Memory and GC tuning
+          "-Xmx1g",
+          "-XX:+UseG1GC",
+          "-XX:+UseStringDeduplication",
+          -- Required --add-opens for JetBrains runtime
+          "--add-opens",
+          "java.base/java.io=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.lang=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.lang.ref=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.lang.reflect=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.net=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.nio=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.nio.charset=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.text=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.time=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.util=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.util.concurrent=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/java.util.concurrent.locks=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/jdk.internal.ref=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/jdk.internal.vm=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/sun.net.dns=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/sun.nio.ch=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/sun.nio.fs=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/sun.security.ssl=ALL-UNNAMED",
+          "--add-opens",
+          "java.base/sun.security.util=ALL-UNNAMED",
+          "--add-opens",
+          "java.desktop/sun.awt=ALL-UNNAMED",
+          "--add-opens",
+          "java.desktop/sun.awt.X11=ALL-UNNAMED",
+          "--add-opens",
+          "java.desktop/sun.font=ALL-UNNAMED",
+          "--add-opens",
+          "java.desktop/sun.java2d=ALL-UNNAMED",
+          "--add-opens",
+          "java.desktop/sun.swing=ALL-UNNAMED",
+          "--add-opens",
+          "java.management/sun.management=ALL-UNNAMED",
+          "--add-opens",
+          "jdk.attach/sun.tools.attach=ALL-UNNAMED",
+          "--add-opens",
+          "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+          "--add-opens",
+          "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
+          "--add-opens",
+          "jdk.jdi/com.sun.tools.jdi=ALL-UNNAMED",
+          "--enable-native-access=ALL-UNNAMED",
+          "-Djdk.lang.Process.launchMechanism=FORK",
+          "-Djava.awt.headless=true",
+          "-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader",
+          "-Xlog:cds=off",
+          "-cp",
+          kotlin_lsp_dir .. "/lib/*",
+          "com.jetbrains.ls.kotlinLsp.KotlinLspServerKt",
+          "--stdio",
         },
         settings = {
           kotlin = {
@@ -320,12 +400,12 @@ return {
               },
             },
             linting = {
-              debounceTime = 250,
+              debounceTime = 500,
             },
             hints = {
-              typeHints = true,
-              parameterHints = true,
-              chainingHints = true,
+              typeHints = false,
+              parameterHints = false,
+              chainingHints = false,
             },
             formatting = {
               -- Disable if using ktlint/ktfmt via conform.nvim
@@ -336,10 +416,10 @@ return {
             },
             externalSources = {
               useKlsScheme = true,
-              autoConvertToKotlin = true,
+              autoConvertToKotlin = false,
             },
             debugAdapter = {
-              enabled = true,
+              enabled = false,
               path = "",
             },
           },
@@ -590,6 +670,9 @@ return {
         cmd = {
           "jdtls",
           "--jvm-arg=-javaagent:" .. vim.fn.expand "~/.local/share/java/lombok.jar",
+          "--jvm-arg=-Xmx1g",
+          "--jvm-arg=-XX:+UseG1GC",
+          "--jvm-arg=-XX:+UseStringDeduplication",
         },
         settings = {
           java = {
@@ -619,7 +702,7 @@ return {
             saveActions = {
               organizeImports = false,
             },
-            autobuild = { enabled = true },
+            autobuild = { enabled = false },
             cleanup = {
               actionsOnSave = {},
             },
@@ -630,6 +713,22 @@ return {
             },
             edit = {
               validateAllOpenBuffersOnChanges = false,
+            },
+            references = {
+              includeDecompiledSources = false,
+            },
+            implementationsCodeLens = { enabled = false },
+            referencesCodeLens = { enabled = false },
+            inlayHints = {
+              parameterNames = { enabled = "none" },
+            },
+            import = {
+              exclusions = {
+                "**/node_modules/**",
+                "**/.metadata/**",
+                "**/archetype-resources/**",
+                "**/META-INF/maven/**",
+              },
             },
           },
         },

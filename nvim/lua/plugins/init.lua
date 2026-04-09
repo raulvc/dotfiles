@@ -49,13 +49,6 @@ return {
   },
   { "nvim-tree/nvim-web-devicons", opts = {} },
   {
-    "windwp/nvim-autopairs",
-    event = "InsertEnter",
-    config = true,
-    -- use opts = {} for passing setup options
-    -- this is equivalent to setup({}) function
-  },
-  {
     "cuducos/yaml.nvim",
     ft = { "yaml" }, -- optional
     dependencies = {
