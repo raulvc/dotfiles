@@ -58,6 +58,16 @@ return {
     "neovim/nvim-lspconfig",
     lazy = false,
     config = function()
+      -- Prevent LSP from ever attaching to diffview:// buffers
+      local orig_buf_attach = vim.lsp.buf_attach_client
+      vim.lsp.buf_attach_client = function(bufnr, client_id)
+        local bufname = vim.api.nvim_buf_get_name(bufnr)
+        if bufname:match "^diffview://" then
+          return false
+        end
+        return orig_buf_attach(bufnr, client_id)
+      end
+
       local capabilities = require("blink.cmp").get_lsp_capabilities()
       local builtin = require "telescope.builtin"
 
@@ -739,6 +749,15 @@ return {
         callback = function(args)
           local client = vim.lsp.get_client_by_id(args.data.client_id)
           if not client then
+            return
+          end
+
+          -- Detach LSP from diffview buffers
+          local bufname = vim.api.nvim_buf_get_name(args.buf)
+          if bufname:match "^diffview://" then
+            vim.schedule(function()
+              pcall(vim.lsp.buf_detach_client, args.buf, client.id)
+            end)
             return
           end
 
