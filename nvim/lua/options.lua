@@ -212,3 +212,5 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     vim.lsp.buf.code_action { context = { only = { "source.fixAll" } }, apply = true }
   end,
 })
+
+opt.inccommand = "split" -- or "nosplit"

@@ -144,8 +144,8 @@ vim.keymap.set({ "n", "v" }, "<Esc>", function()
   local filetype = vim.bo.filetype
 
   if filetype == "codecompanion" or buftype == "codecompanion" then
-    -- In CodeCompanion buffer, let Esc work normally (enter visual mode)
-    return "<Esc>"
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    return
   end
 
   if mc.hasCursors() then
@@ -158,10 +158,22 @@ vim.keymap.set({ "n", "v" }, "<Esc>", function()
   else
     vim.cmd "silent! NoiceDismiss"
     vim.cmd "silent! noh"
-    vim.cmd "silent! fclose" -- Close floating windows
-    return "<Esc>"
+    -- Close floating windows (gitsigns preview, hover docs, etc.)
+    -- Skip persistent floats like mini.map (low zindex)
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+      if vim.api.nvim_win_is_valid(win) then
+        local config = vim.api.nvim_win_get_config(win)
+        if config.relative and config.relative ~= "" then
+          local zindex = config.zindex or 0
+          if zindex >= 50 then
+            pcall(vim.api.nvim_win_close, win, true)
+          end
+        end
+      end
+    end
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
   end
-end, { expr = true, desc = "Smart Esc" })
+end, { desc = "Smart Esc" })
 
 map({ "n", "i" }, "<C-S-a>", function()
   if vim.fn.mode() == "i" then

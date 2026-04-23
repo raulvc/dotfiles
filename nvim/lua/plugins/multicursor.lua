@@ -224,8 +224,7 @@ return {
     local function mc_paste(paste_key)
       return function()
         if not mc.hasCursors() then
-          local keys = vim.api.nvim_replace_termcodes(paste_key, true, false, true)
-          vim.api.nvim_feedkeys(keys, "n", false)
+          require("smart-paste").paste { key = paste_key }
           return
         end
 

@@ -45,12 +45,32 @@ return {
       max_file_length = 40000, -- Disable if file is longer than this (in lines)
       preview_config = {
         -- Options passed to nvim_open_win
-        border = "single",
+        border = "rounded",
         style = "minimal",
         relative = "cursor",
         row = 0,
         col = 1,
       },
+      on_attach = function(bufnr)
+        local gs = require "gitsigns"
+
+        local function map(mode, l, r, opts)
+          opts = opts or {}
+          opts.buffer = bufnr
+          vim.keymap.set(mode, l, r, opts)
+        end
+
+        -- Navigate hunks
+        map("n", "<C-Up>", function()
+          gs.nav_hunk "prev"
+        end)
+        map("n", "<C-Down>", function()
+          gs.nav_hunk "next"
+        end)
+
+        -- Preview hunk in floating modal
+        map("n", "<leader>gdd", gs.preview_hunk, { desc = "Preview hunk diff" })
+      end,
     }
   end,
 }

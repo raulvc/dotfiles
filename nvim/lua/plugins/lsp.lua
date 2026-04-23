@@ -58,9 +58,14 @@ return {
     "neovim/nvim-lspconfig",
     lazy = false,
     config = function()
+      require("configs.jar-sources").setup()
+
       -- Prevent LSP from ever attaching to diffview:// buffers
       local orig_buf_attach = vim.lsp.buf_attach_client
       vim.lsp.buf_attach_client = function(bufnr, client_id)
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return false
+        end
         local bufname = vim.api.nvim_buf_get_name(bufnr)
         if bufname:match "^diffview://" then
           return false
@@ -70,6 +75,101 @@ return {
 
       local capabilities = require("blink.cmp").get_lsp_capabilities()
       local builtin = require "telescope.builtin"
+
+      -- Compatibility patches for Go plugins on Neovim 0.11+
+      do
+        local ok, goplements = pcall(require, "goplements")
+        if ok and type(goplements) == "table" then
+          local original_impl_callback = goplements.implementation_callback
+          if type(original_impl_callback) == "function" then
+            goplements.implementation_callback = function(fcache, result, publish_names)
+              local wrapped_publish = function(names)
+                publish_names(names or {})
+              end
+
+              local ok_cb, err = pcall(original_impl_callback, fcache, result, wrapped_publish)
+              if ok_cb then
+                return
+              end
+
+              local names = {}
+              if result then
+                for _, impl in pairs(result) do
+                  local uri = impl.uri
+                  local impl_line = impl.range.start.line
+                  local impl_start = impl.range.start.character
+                  local impl_end = impl.range["end"].character
+                  local data = {}
+                  local buf = vim.uri_to_bufnr(uri)
+
+                  if vim.api.nvim_buf_is_loaded(buf) then
+                    data = vim.api.nvim_buf_get_lines(buf, 0, impl_line + 1, false)
+                  else
+                    local file = vim.uri_to_fname(uri)
+                    data = fcache[file]
+                    if not data then
+                      local ok_read, read_result = pcall(vim.fn.readfile, file)
+                      data = ok_read and read_result or {}
+                      fcache[file] = data
+                    end
+                  end
+
+                  local package_name = ""
+                  if goplements.config and goplements.config.display_package then
+                    package_name = goplements.get_package_name(data)
+                    if package_name ~= "" then
+                      package_name = package_name .. "."
+                    end
+                  end
+
+                  local impl_text = data[impl_line + 1]
+                  if type(impl_text) == "string" and impl_text ~= "" then
+                    local safe_start = math.max(1, impl_start + 1)
+                    local safe_end = math.max(safe_start, impl_end)
+                    local name = impl_text:sub(safe_start, safe_end)
+                    if name ~= "" then
+                      table.insert(names, package_name .. name)
+                    end
+                  end
+                end
+              end
+
+              vim.schedule(function()
+                vim.notify(
+                  "goplements fallback patch handled implementation parsing failure: " .. tostring(err),
+                  vim.log.levels.DEBUG
+                )
+              end)
+              wrapped_publish(names)
+            end
+          end
+
+          local original_setup = goplements.setup
+          if type(original_setup) == "function" then
+            goplements.setup = function(opts)
+              original_setup(opts)
+              if goplements._namespace == 0 then
+                goplements._namespace = vim.api.nvim_create_namespace(
+                  (goplements.config and goplements.config.namespace_name) or "goplements"
+                )
+              end
+            end
+          end
+        end
+      end
+
+      local original_bufload = vim.fn.bufload
+      vim.fn.bufload = function(buf)
+        local ok, result = pcall(original_bufload, buf)
+        if not ok then
+          local msg = tostring(result)
+          if msg:match "E325" then
+            return 0
+          end
+          error(result)
+        end
+        return result
+      end
 
       -- Fix: "Cursor position outside buffer" when navigating to external files
       -- (e.g. decompiled .class files from Kotlin LSP with custom URI schemes)
@@ -1034,6 +1134,12 @@ return {
     "maxandron/goplements.nvim",
     lazy = true,
     ft = "go",
-    opts = {},
+    opts = function()
+      local ok, goplements = pcall(require, "goplements")
+      if ok and type(goplements) == "table" and goplements._namespace == 0 then
+        goplements._namespace = vim.api.nvim_create_namespace "goplements"
+      end
+      return {}
+    end,
   },
 }

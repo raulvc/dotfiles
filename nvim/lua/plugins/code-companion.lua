@@ -122,12 +122,12 @@ return {
                 },
                 schema = {
                   model = {
-                    default = "claude-opus-4-6-vertexai",
+                    default = "gpt-5.4",
                     choices = {
                       "glm-5-maas",
                       "claude-opus-4-6-bedrock",
                       "claude-opus-4-6-vertexai",
-                      "claude-opus-4-5-20251101-v1",
+                      "gpt-5.4",
                     },
                   },
                   temperature = {

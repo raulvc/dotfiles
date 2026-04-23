@@ -54,6 +54,7 @@ return {
         end
       end
 
+      local jar_sources = require "configs.jar-sources"
       local api = require "nvim-tree.api"
 
       local function get_git_root(cwd)
@@ -69,10 +70,14 @@ return {
         return vim.fn.fnamemodify(out[1], ":p")
       end
 
-      local function ensure_tree_open_and_focus()
+      local function ensure_tree_open()
         if not api.tree.is_visible() then
           api.tree.open()
         end
+      end
+
+      local function ensure_tree_open_and_focus()
+        ensure_tree_open()
         api.tree.focus()
       end
 
@@ -239,6 +244,41 @@ return {
         api.tree.change_root(new_root)
       end
 
+      local function maybe_switch_tree_to_jar_source(bufname)
+        if type(bufname) ~= "string" or bufname == "" then
+          return
+        end
+
+        local cache_dir
+        if bufname:match "^jar://" then
+          cache_dir = select(1, jar_sources.open_jar_uri(bufname))
+        elseif jar_sources.is_cache_path(bufname) then
+          -- Reroot at the top of the extracted jar (stdpath('cache')/jar-sources/<name>-<hash>)
+          local rel = bufname:sub(#jar_sources.cache_root + 2)
+          local top = rel:match "^([^/]+)"
+          if top then
+            cache_dir = jar_sources.cache_root .. "/" .. top
+          end
+        end
+
+        if not cache_dir then
+          return
+        end
+        cache_dir = vim.fn.fnamemodify(cache_dir, ":p")
+
+        if current_tree_root ~= cache_dir then
+          if not is_dep_dir(current_tree_root) and not jar_sources.is_cache_path(current_tree_root) then
+            last_project_root = current_tree_root
+          end
+          set_tree_root(cache_dir)
+        end
+        ensure_tree_open()
+        -- Highlight the focused file after reroot without stealing focus.
+        vim.schedule(function()
+          pcall(api.tree.find_file, { buf = bufname, open = false, focus = false })
+        end)
+      end
+
       require("nvim-tree").setup {
         filters = {
           dotfiles = false,
@@ -266,6 +306,9 @@ return {
             local dep_label = go_dep_root_label(path)
             if dep_label then
               return dep_label
+            end
+            if jar_sources.is_cache_path(path) then
+              return "☕ " .. vim.fn.fnamemodify(path, ":t")
             end
             -- Your existing project-root label for go.mod projects
             local go_mod = path .. "/go.mod"
@@ -398,13 +441,38 @@ return {
       vim.api.nvim_create_autocmd("BufEnter", {
         callback = function()
           local bufname = vim.api.nvim_buf_get_name(0)
-          if bufname == "" or vim.bo.buftype ~= "" then
+          if bufname == "" then
+            return
+          end
+          -- Allow jar:// (buftype=nofile after BufReadCmd) and cached jar paths through
+          if vim.bo.buftype ~= "" and not (bufname:match "^jar://" or jar_sources.is_cache_path(bufname)) then
             return
           end
 
           -- Skip if we're in nvim-tree itself
           if vim.bo.filetype == "NvimTree" then
             return
+          end
+
+          -- Handle jar:// and cached jar contents first
+          if bufname:match "^jar://" or jar_sources.is_cache_path(bufname) then
+            maybe_switch_tree_to_jar_source(bufname)
+            return
+          end
+
+          -- Returning to a normal file while tree is rooted in a jar cache:
+          -- restore the previous project root (git root as fallback).
+          if jar_sources.is_cache_path(current_tree_root) then
+            local project_root = last_project_root
+            if not project_root or project_root == "" or jar_sources.is_cache_path(project_root) then
+              project_root = get_git_root(vim.fn.fnamemodify(bufname, ":p:h"))
+            end
+            if project_root and current_tree_root ~= project_root then
+              set_tree_root(project_root)
+              vim.schedule(function()
+                pcall(api.tree.find_file, { buf = bufname, open = false, focus = false })
+              end)
+            end
           end
 
           local buf_dir = vim.fn.fnamemodify(bufname, ":p:h")
