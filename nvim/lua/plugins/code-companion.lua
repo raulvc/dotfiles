@@ -6,7 +6,7 @@ return {
     branch = "main",
     dependencies = {
       "nvim-lua/plenary.nvim",
-      "nvim-treesitter/nvim-treesitter",
+      "romus204/tree-sitter-manager.nvim",
       "ravitemer/codecompanion-history.nvim",
       "nvim-telescope/telescope.nvim",
     },

@@ -2,7 +2,7 @@ return {
   "ThePrimeagen/refactoring.nvim",
   dependencies = {
     "nvim-lua/plenary.nvim",
-    "nvim-treesitter/nvim-treesitter",
+    "romus204/tree-sitter-manager.nvim",
     "lewis6991/async.nvim",
   },
   opts = {},

@@ -4,6 +4,7 @@
 !nvim
 !nvim/*
 nvim/lazy-lock.json
+nvim/breakpoints.json
 !alacritty*
 !zellij
 !zellij/*

@@ -240,20 +240,10 @@ return {
         },
       },
       {
-        "theHamsta/nvim-dap-virtual-text",
-      },
-      {
         "leoluz/nvim-dap-go",
         ft = "go",
         config = function()
           require("dap-go").setup()
-        end,
-      },
-      {
-        "LiadOz/nvim-dap-repl-highlights",
-        dependencies = { "nvim-treesitter/nvim-treesitter" },
-        config = function()
-          require("nvim-dap-repl-highlights").setup()
         end,
       },
     },
@@ -490,35 +480,9 @@ return {
     end,
   },
   {
-    "theHamsta/nvim-dap-virtual-text",
-    dependencies = { "mfussenegger/nvim-dap", "nvim-treesitter/nvim-treesitter" },
-    config = function()
-      require("nvim-dap-virtual-text").setup {
-        enabled = true,
-        enabled_commands = true,
-        highlight_changed_variables = true,
-        highlight_new_as_changed = false,
-        show_stop_reason = true,
-        commented = false,
-        only_first_definition = true,
-        all_references = false,
-        virt_text_pos = "eol",
-        all_frames = false,
-        virt_text_win_col = nil,
-        display_callback = function(variable, buf, stackframe, node, options)
-          if #variable.value > 50 then
-            return variable.name .. " = " .. string.sub(variable.value, 1, 47) .. "..."
-          end
-          return variable.name .. " = " .. variable.value
-        end,
-      }
-    end,
-  },
-
-  {
     "igorlfs/nvim-dap-view",
     event = "VeryLazy",
-    version = "1.*",
+
     dependencies = {
       "mfussenegger/nvim-dap",
     },
@@ -560,6 +524,42 @@ return {
 
       switchbuf = "usetab,uselast",
       auto_toggle = true,
+      virtual_text = {
+        enabled = true,
+        position = "eol",
+        format = function(variable, _, _)
+          local raw = variable.value:gsub("%s+", " ")
+          local typ = variable.type or ""
+
+          -- Strip delve metadata: "(loaded N/M) Type len: N, cap: N, " prefix
+          local val = raw:gsub("^%b()%s*", "")
+          val = val:gsub("^%S+%s+len:%s*%d+,%s*cap:%s*%d+,%s*", "")
+
+          local type_suffix = ""
+          if typ ~= "" then
+            type_suffix = " " .. string.sub(typ, 1, 20)
+          end
+          local win = vim.api.nvim_get_current_win()
+          local max = vim.api.nvim_win_get_width(win)
+          local col = vim.fn.col("$")
+          local available = max - col - 4 - #type_suffix
+          if available < 10 then
+            available = 10
+          end
+          if #val > available then
+            val = string.sub(val, 1, available - 3) .. "..."
+          end
+          return " " .. val .. type_suffix
+        end,
+        prefix = function()
+          return nil
+        end,
+        suffix = function(position, _, _, var_index, num_var_line)
+          if position == "eol" or position == "eol_right_align" then
+            return var_index == num_var_line and "" or ","
+          end
+        end,
+      },
     },
     config = function(_, opts)
       local dap = require "dap"

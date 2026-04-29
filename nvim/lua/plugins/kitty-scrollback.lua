@@ -13,7 +13,7 @@ return {
   { "diffview.nvim", enabled = not is_kitty_scrollback },
 
   -- Disable treesitter parsing
-  { "nvim-treesitter", enabled = not is_kitty_scrollback },
+  { "tree-sitter-manager.nvim", enabled = not is_kitty_scrollback },
   { "nvim-treesitter-context", enabled = not is_kitty_scrollback },
   { "nvim-treesitter-textobjects", enabled = not is_kitty_scrollback },
 
@@ -29,7 +29,6 @@ return {
   { "nvim-dap", enabled = not is_kitty_scrollback },
   { "nvim-dap-view", enabled = not is_kitty_scrollback },
   { "nvim-dap-virtual-text", enabled = not is_kitty_scrollback },
-  { "nvim-dap-repl-highlights", enabled = not is_kitty_scrollback },
   { "nvim-dap-go", enabled = not is_kitty_scrollback },
   { "mason-nvim-dap.nvim", enabled = not is_kitty_scrollback },
 
