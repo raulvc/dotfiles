@@ -67,7 +67,7 @@ vim.keymap.set("n", "<C-Tab>", function()
   require("telescope.builtin").buffers {
     sort_lastused = true,
     ignore_current_buffer = true,
-    initial_mode = "normal",
+    initial_mode = "insert",
   }
 end, { desc = "Switch to recent buffer (JetBrains-style)" })
 

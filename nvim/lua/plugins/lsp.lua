@@ -404,8 +404,33 @@ return {
         },
       })
 
-      local kotlin_lsp_dir = vim.fn.expand "~/.local/share/nvim/mason/packages/kotlin-lsp"
-      local kotlin_jre = kotlin_lsp_dir .. "/jre/bin/java"
+      -- Locate the kotlin-lsp launcher shipped by Mason. The Mason package
+      -- nests its payload under a versioned directory, so glob for it.
+      local function resolve_kotlin_lsp_cmd()
+        local pkg_root = vim.fn.expand "~/.local/share/nvim/mason/packages/kotlin-lsp"
+        -- Prefer the new launcher (bin/intellij-server); fall back to the
+        -- deprecated kotlin-lsp.sh for older Mason builds.
+        local patterns = {
+          "/kotlin-server-*/bin/intellij-server",
+          "/kotlin-server-*/kotlin-lsp.sh",
+        }
+        for _, pat in ipairs(patterns) do
+          for _, path in ipairs(vim.fn.glob(pkg_root .. pat, true, true)) do
+            if vim.fn.executable(path) == 1 then
+              return path
+            end
+          end
+        end
+        vim.schedule(function()
+          vim.notify(
+            "kotlin_lsp: launcher not found under " .. pkg_root .. ". Run :MasonInstall kotlin-lsp",
+            vim.log.levels.ERROR
+          )
+        end)
+        return nil
+      end
+
+      local kotlin_lsp_launcher = resolve_kotlin_lsp_cmd()
 
       vim.lsp.config("kotlin_lsp", {
         capabilities = capabilities,
@@ -420,83 +445,7 @@ return {
         init_options = {
           storagePath = vim.fn.stdpath "cache" .. "/kotlin-language-server",
         },
-        cmd = {
-          kotlin_jre,
-          -- Memory and GC tuning
-          "-Xmx1g",
-          "-XX:+UseG1GC",
-          "-XX:+UseStringDeduplication",
-          -- Required --add-opens for JetBrains runtime
-          "--add-opens",
-          "java.base/java.io=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.lang=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.lang.ref=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.lang.reflect=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.net=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.nio=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.nio.charset=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.text=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.time=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.util=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.util.concurrent=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.util.concurrent.atomic=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/java.util.concurrent.locks=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/jdk.internal.ref=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/jdk.internal.vm=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/sun.net.dns=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/sun.nio.ch=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/sun.nio.fs=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/sun.security.ssl=ALL-UNNAMED",
-          "--add-opens",
-          "java.base/sun.security.util=ALL-UNNAMED",
-          "--add-opens",
-          "java.desktop/sun.awt=ALL-UNNAMED",
-          "--add-opens",
-          "java.desktop/sun.awt.X11=ALL-UNNAMED",
-          "--add-opens",
-          "java.desktop/sun.font=ALL-UNNAMED",
-          "--add-opens",
-          "java.desktop/sun.java2d=ALL-UNNAMED",
-          "--add-opens",
-          "java.desktop/sun.swing=ALL-UNNAMED",
-          "--add-opens",
-          "java.management/sun.management=ALL-UNNAMED",
-          "--add-opens",
-          "jdk.attach/sun.tools.attach=ALL-UNNAMED",
-          "--add-opens",
-          "jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
-          "--add-opens",
-          "jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
-          "--add-opens",
-          "jdk.jdi/com.sun.tools.jdi=ALL-UNNAMED",
-          "--enable-native-access=ALL-UNNAMED",
-          "-Djdk.lang.Process.launchMechanism=FORK",
-          "-Djava.awt.headless=true",
-          "-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader",
-          "-Xlog:cds=off",
-          "-cp",
-          kotlin_lsp_dir .. "/lib/*",
-          "com.jetbrains.ls.kotlinLsp.KotlinLspServerKt",
-          "--stdio",
-        },
+        cmd = kotlin_lsp_launcher and { kotlin_lsp_launcher, "--stdio" } or { "false" },
         settings = {
           kotlin = {
             compiler = {
@@ -1029,6 +978,7 @@ return {
 
       -- (Default) Only show the documentation popup when manually triggered
       completion = {
+        trigger = { prefetch_on_insert = false },
         documentation = { auto_show = true },
         list = { selection = { auto_insert = false } },
         menu = {
@@ -1055,7 +1005,7 @@ return {
       -- Default list of enabled providers defined so that you can extend it
       -- elsewhere in your config, without redefining it, due to `opts_extend`
       sources = {
-        default = { "lazydev", "lsp", "go_deep", "path", "snippets", "buffer", "copilot", "emoji", "sql" },
+        default = { "lazydev", "lsp", "go_deep", "path", "snippets", "buffer", "minuet", "emoji", "sql" },
         providers = {
           lazydev = {
             name = "LazyDev",
@@ -1063,11 +1013,24 @@ return {
             -- make lazydev completions top priority (see `:h blink.cmp`)
             score_offset = 100,
           },
-          copilot = {
-            name = "copilot",
-            module = "blink-cmp-copilot",
+          minuet = {
+            name = "minuet",
+            module = "minuet.blink",
             score_offset = -100,
             async = true,
+            timeout_ms = 3000,
+            should_show_items = function()
+              local ft = vim.bo.filetype
+              return not vim.tbl_contains({
+                "codecompanion",
+                "codecompanion-chat",
+                "codecompanion-inline",
+                "codecompanion_actions",
+                "codecompanion_chat",
+                "codecompanion_inline",
+                "CodeCompanion",
+              }, ft)
+            end,
           },
           emoji = {
             module = "blink-emoji",
@@ -1126,8 +1089,50 @@ return {
   },
 
   {
-    "giuxtaposition/blink-cmp-copilot",
-    dependencies = { "zbirenbaum/copilot.lua" },
+    "milanglacier/minuet-ai.nvim",
+    lazy = false,
+    config = function()
+      require("minuet").setup {
+        provider = "openai_compatible",
+        n_completions = 1,
+        context_window = 2048,
+        throttle = 400,
+        debounce = 200,
+        request_timeout = 4,
+        virtualtext = {
+          auto_trigger_ft = { "*" },
+          keymap = {
+            accept = "<C-l>",
+            accept_line = "<A-a>",
+            prev = "<A-[>",
+            next = "<A-]>",
+            dismiss = "<A-e>",
+          },
+        },
+        provider_options = {
+          openai_compatible = {
+            api_key = "REQUESTER_TOKEN",
+            end_point = (vim.env.GENPLAT_URL or "") .. "/v1/chat/completions",
+            model = "gpt-4.1-nano",
+            name = "GenPlat",
+            stream = true,
+            optional = {
+              max_tokens = 128,
+              -- no reasoning_effort — this isn't a reasoning model
+            },
+          },
+        },
+      }
+
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "codecompanion-chat", "codecompanion_chat" },
+        callback = function(args)
+          pcall(function()
+            require("minuet").toggle_auto_trigger(args.buf, false)
+          end)
+        end,
+      })
+    end,
   },
 
   {

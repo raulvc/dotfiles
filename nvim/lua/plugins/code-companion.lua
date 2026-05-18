@@ -182,23 +182,5 @@ return {
       }
     end,
   },
-  {
-    "zbirenbaum/copilot.lua",
-    cmd = "Copilot",
-    event = "InsertEnter",
-    config = function()
-      require("copilot").setup {
-        panel = { enabled = false },
-        suggestion = {
-          enabled = true,
-          auto_trigger = true,
-          debounce = 500,
-          keymap = {
-            accept = "<C-l>",
-            dismiss = "<Esc>",
-          },
-        },
-      }
-    end,
-  },
+
 }

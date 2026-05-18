@@ -2,8 +2,7 @@ local is_kitty_scrollback = vim.env.KITTY_SCROLLBACK_NVIM ~= nil
 
 return {
   { "rmagatti/auto-session", enabled = not is_kitty_scrollback },
-  { "zbirenbaum/copilot.lua", enabled = not is_kitty_scrollback },
-  { "giuxtaposition/blink-cmp-copilot", enabled = not is_kitty_scrollback },
+  { "milanglacier/minuet-ai.nvim", enabled = not is_kitty_scrollback },
   { "saghen/blink.cmp", enabled = not is_kitty_scrollback },
   { "xzbdmw/colorful-menu.nvim", enabled = not is_kitty_scrollback },
 
@@ -28,7 +27,6 @@ return {
   -- Disable DAP (debugger) plugins
   { "nvim-dap", enabled = not is_kitty_scrollback },
   { "nvim-dap-view", enabled = not is_kitty_scrollback },
-  { "nvim-dap-virtual-text", enabled = not is_kitty_scrollback },
   { "nvim-dap-go", enabled = not is_kitty_scrollback },
   { "mason-nvim-dap.nvim", enabled = not is_kitty_scrollback },
 
