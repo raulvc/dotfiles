@@ -18,8 +18,7 @@ local options = {
     dockerfile = { "hadolint" },
     proto = { "buf" },
     terraform = { "terraform_fmt" },
-    tf = { "terraform_fmt" },
-    hcl = { "terraform_fmt" },
+    hcl = { "hclfmt" },
     ruby = { "cookstyle" },
     java = { "google-java-format" },
     xml = { "xmlformat" },
@@ -32,7 +31,8 @@ local options = {
       args = { "--indent", "2" },
     },
     yamlfmt = {
-      args = { "-formatter", "indent=2,retain_line_breaks=true" },
+      args = { "-formatter", "indent=2", "-formatter", "retain_line_breaks_single=true", "-" },
+      stdin = true,
     },
     black = {
       prepend_args = {
@@ -67,6 +67,10 @@ local options = {
       args = { "fmt", "-" },
       stdin = true,
     },
+    hclfmt = {
+      command = "hclfmt",
+      stdin = true,
+    },
     ["google-java-format"] = {
       command = "google-java-format",
       args = { "--aosp", "-" },
@@ -84,8 +88,8 @@ local options = {
     },
     ktlint = {
       command = "ktlint",
-      args = { "--format", "$FILENAME" },
-      stdin = false,
+      args = { "--format", "--stdin", "--log-level=none" },
+      stdin = true,
     },
     checkmake = {
       command = "checkmake",
@@ -99,20 +103,39 @@ local options = {
     if _formatting_guard[bufnr] then
       return nil
     end
+
+    -- JVM-based formatters (ktlint, google-java-format, npm-groovy-lint) have
+    -- multi-second startup and block the UI when run synchronously on save.
+    -- They are handled by format_after_save below.
+    local async_filetypes = { kotlin = true, java = true, groovy = true }
+    if async_filetypes[vim.bo[bufnr].filetype] then
+      return nil
+    end
+
     _formatting_guard[bufnr] = true
     vim.defer_fn(function()
       _formatting_guard[bufnr] = nil
     end, 5000)
 
-    local slow_filetypes = { kotlin = true, java = true, groovy = true }
-    if slow_filetypes[vim.bo[bufnr].filetype] then
-      return {
-        timeout_ms = 30000,
-        lsp_format = "never",
-      }
-    end
     return {
       timeout_ms = 2000,
+      lsp_format = "never",
+    }
+  end,
+
+  format_after_save = function(bufnr)
+    local async_filetypes = { kotlin = true, java = true, groovy = true }
+    if not async_filetypes[vim.bo[bufnr].filetype] then
+      return nil
+    end
+    if _formatting_guard[bufnr] then
+      return nil
+    end
+    _formatting_guard[bufnr] = true
+    vim.defer_fn(function()
+      _formatting_guard[bufnr] = nil
+    end, 30000)
+    return {
       lsp_format = "never",
     }
   end,

@@ -1,6 +1,7 @@
 return {
   {
     "saghen/blink.pairs",
+    lazy = false,
     version = "*",
     dependencies = { "saghen/blink.download" },
     opts = {

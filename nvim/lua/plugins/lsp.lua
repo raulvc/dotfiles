@@ -432,58 +432,26 @@ return {
 
       local kotlin_lsp_launcher = resolve_kotlin_lsp_cmd()
 
-      vim.lsp.config("kotlin_lsp", {
-        capabilities = capabilities,
-        root_markers = {
-          "settings.gradle",
-          "settings.gradle.kts",
-          "build.gradle",
-          "build.gradle.kts",
-          "pom.xml",
-          ".git",
-        },
-        init_options = {
-          storagePath = vim.fn.stdpath "cache" .. "/kotlin-language-server",
-        },
-        cmd = kotlin_lsp_launcher and { kotlin_lsp_launcher, "--stdio" } or { "false" },
-        settings = {
-          kotlin = {
-            compiler = {
-              jvm = {
-                target = "17",
-              },
-            },
-            completion = {
-              snippets = {
-                enabled = true,
-              },
-            },
-            linting = {
-              debounceTime = 500,
-            },
-            hints = {
-              typeHints = false,
-              parameterHints = false,
-              chainingHints = false,
-            },
-            formatting = {
-              -- Disable if using ktlint/ktfmt via conform.nvim
-              enabled = false,
-            },
-            indexing = {
-              enabled = true,
-            },
-            externalSources = {
-              useKlsScheme = true,
-              autoConvertToKotlin = false,
-            },
-            debugAdapter = {
-              enabled = false,
-              path = "",
-            },
+      -- JetBrains kotlin-lsp (intellij-server). It rejects the
+      -- fwcd/kotlin-language-server style `settings.kotlin.*` schema and
+      -- ignores unknown init_options, so we keep the override minimal and
+      -- rely on nvim-lspconfig's built-in preset (filetypes, root_markers,
+      -- cmd = { 'intellij-server', '--stdio' } which Mason puts on PATH).
+      if kotlin_lsp_launcher then
+        vim.lsp.config("kotlin_lsp", {
+          capabilities = capabilities,
+          cmd = { kotlin_lsp_launcher, "--stdio" },
+          single_file_support = true,
+          root_markers = {
+            "settings.gradle.kts",
+            "settings.gradle",
+            "build.gradle.kts",
+            "build.gradle",
+            "pom.xml",
+            ".git",
           },
-        },
-      })
+        })
+      end
 
       vim.lsp.config("jsonls", {
         capabilities = capabilities,

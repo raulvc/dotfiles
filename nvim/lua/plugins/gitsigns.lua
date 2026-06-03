@@ -61,12 +61,12 @@ return {
         end
 
         -- Navigate hunks
-        map("n", "<C-Up>", function()
-          gs.nav_hunk "prev"
-        end)
-        map("n", "<C-Down>", function()
+        map("n", "]h", function()
           gs.nav_hunk "next"
-        end)
+        end, { desc = "Next hunk" })
+        map("n", "[h", function()
+          gs.nav_hunk "prev"
+        end, { desc = "Previous hunk" })
 
         -- Preview hunk in floating modal
         map("n", "<leader>gdd", gs.preview_hunk, { desc = "Preview hunk diff" })

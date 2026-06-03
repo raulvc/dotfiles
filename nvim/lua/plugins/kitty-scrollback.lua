@@ -10,6 +10,7 @@ return {
   { "gitsigns.nvim", enabled = not is_kitty_scrollback },
   { "git-blame.nvim", enabled = not is_kitty_scrollback },
   { "diffview.nvim", enabled = not is_kitty_scrollback },
+  { "gitlineage.nvim", enabled = not is_kitty_scrollback },
 
   -- Disable treesitter parsing
   { "tree-sitter-manager.nvim", enabled = not is_kitty_scrollback },

@@ -122,8 +122,9 @@ return {
                 },
                 schema = {
                   model = {
-                    default = "gpt-5.4",
+                    default = "glm-5.1",
                     choices = {
+                      "glm-5.1",
                       "glm-5-maas",
                       "claude-opus-4-6-bedrock",
                       "claude-opus-4-6-vertexai",
@@ -182,5 +183,4 @@ return {
       }
     end,
   },
-
 }

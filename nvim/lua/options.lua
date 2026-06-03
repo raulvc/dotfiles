@@ -204,12 +204,28 @@ autocmd("BufReadPost", {
   end,
 })
 
+-- Slow JVM-based formatters (handled by conform's format_after_save in
+-- configs/conform.lua to keep the UI responsive). Also skip synchronous LSP
+-- code_action calls for these filetypes — jdtls/kotlin_lsp can stall for
+-- seconds, which locks the whole editor.
+local _slow_jvm_fts = { kotlin = true, java = true, groovy = true }
+
 vim.api.nvim_create_autocmd("BufWritePre", {
   callback = function(args)
-    require("conform").format { bufnr = args.buf }
+    if _slow_jvm_fts[vim.bo[args.buf].filetype] then
+      return
+    end
 
-    vim.lsp.buf.code_action { context = { only = { "source.organizeImports" } }, apply = true }
-    vim.lsp.buf.code_action { context = { only = { "source.fixAll" } }, apply = true }
+    require("conform").format { bufnr = args.buf, async = false, timeout_ms = 2000 }
+
+    pcall(vim.lsp.buf.code_action, {
+      context = { only = { "source.organizeImports" } },
+      apply = true,
+    })
+    pcall(vim.lsp.buf.code_action, {
+      context = { only = { "source.fixAll" } },
+      apply = true,
+    })
   end,
 })
 

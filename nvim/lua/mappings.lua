@@ -462,6 +462,10 @@ end, { desc = "Wrap current word with angle brackets" })
 -- Half-page navigation
 map("n", "<C-a>", "<C-u>", { desc = "Move up half a page" })
 
+-- Single-line scroll
+map("n", "<C-Down>", "<C-e>", { desc = "Scroll one line down" })
+map("n", "<C-Up>", "<C-y>", { desc = "Scroll one line up" })
+
 -- Sublime-style End key behavior (exclude line break)
 map({ "n", "v" }, "<End>", function()
   local line = vim.api.nvim_get_current_line()

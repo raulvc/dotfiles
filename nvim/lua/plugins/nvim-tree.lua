@@ -280,6 +280,32 @@ return {
       end
 
       require("nvim-tree").setup {
+        git = {
+          enable = true,
+          ignore = false,
+          timeout = 500,
+        },
+        filesystem_watchers = {
+          enable = true,
+          debounce_delay = 50,
+          ignore_dirs = {},
+        },
+        modified = {
+          enable = true,
+        },
+        diagnostics = {
+          enable = true,
+          show_on_dirs = true,
+          icons = {
+            hint = "",
+            info = "",
+            warning = "",
+            error = "",
+          },
+        },
+        sort = {
+          sorter = "case_sensitive",
+        },
         filters = {
           dotfiles = false,
           git_clean = false,
@@ -292,6 +318,7 @@ return {
               enable = false,
             },
             quit_on_open = false,
+            resize_window = false,
           },
         },
         disable_netrw = true,
@@ -300,6 +327,7 @@ return {
           width = 30,
           preserve_window_proportions = true,
           adaptive_size = true,
+          signcolumn = "yes",
         },
         renderer = {
           root_folder_label = function(path)
@@ -325,7 +353,9 @@ return {
             return "📁 " .. vim.fn.fnamemodify(path, ":t")
           end,
 
-          highlight_git = true,
+          highlight_git = "name",
+          highlight_modified = "name",
+          group_empty = true,
           indent_markers = { enable = true },
           icons = {
             web_devicons = {
@@ -340,7 +370,7 @@ return {
             },
             git_placement = "before",
             modified_placement = "after",
-            diagnostics_placement = "signcolumn",
+            diagnostics_placement = "before",
             bookmarks_placement = "signcolumn",
             show = {
               file = true,
@@ -361,7 +391,13 @@ return {
                 symlink = "",
               },
               git = {
-                unmerged = "",
+                unstaged = "✗",
+                staged = "✓",
+                unmerged = "",
+                renamed = "➜",
+                untracked = "★",
+                deleted = "",
+                ignored = "◌",
               },
             },
           },
