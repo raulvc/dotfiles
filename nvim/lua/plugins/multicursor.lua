@@ -121,17 +121,12 @@ return {
         local match_count = vim.fn.searchcount().total or 0
 
         if match_count > 0 then
-          -- Use searchAllAddCursors with the processed pattern
           mc.searchAllAddCursors(processed_pattern)
-          -- Select the match (Sublime-style) using pattern length
-          local plen = #processed_pattern
-          if plen > 1 then
-            mc.action(function(ctx)
-              ctx:forEachCursor(function(cursor)
-                cursor:feedkeys("v" .. (plen - 1) .. "l", { remap = false })
-              end)
+          mc.action(function(ctx)
+            ctx:forEachCursor(function(cursor)
+              cursor:feedkeys("gn", { remap = false })
             end)
-          end
+          end)
 
           vim.notify(string.format("Added cursors to %d matches", match_count))
         else
@@ -147,17 +142,12 @@ return {
         local match_count = vim.fn.searchcount().total or 0
 
         if match_count > 0 then
-          -- Use searchAllAddCursors with the current search pattern
           mc.searchAllAddCursors(search_reg)
-          -- Select the match (Sublime-style) using pattern length
-          local plen = #search_reg
-          if plen > 1 then
-            mc.action(function(ctx)
-              ctx:forEachCursor(function(cursor)
-                cursor:feedkeys("v" .. (plen - 1) .. "l", { remap = false })
-              end)
+          mc.action(function(ctx)
+            ctx:forEachCursor(function(cursor)
+              cursor:feedkeys("gn", { remap = false })
             end)
-          end
+          end)
 
           vim.notify(string.format("Added cursors to %d matches", match_count))
         else

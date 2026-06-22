@@ -55,6 +55,7 @@ return {
       end
 
       local jar_sources = require "configs.jar-sources"
+      local jdt_uri = require "configs.jdt-uri"
       local api = require "nvim-tree.api"
 
       local function get_git_root(cwd)
@@ -267,7 +268,11 @@ return {
         cache_dir = vim.fn.fnamemodify(cache_dir, ":p")
 
         if current_tree_root ~= cache_dir then
-          if not is_dep_dir(current_tree_root) and not jar_sources.is_cache_path(current_tree_root) then
+          if
+            not is_dep_dir(current_tree_root)
+            and not jar_sources.is_cache_path(current_tree_root)
+            and not jdt_uri.is_cache_path(current_tree_root)
+          then
             last_project_root = current_tree_root
           end
           set_tree_root(cache_dir)
@@ -276,6 +281,47 @@ return {
         -- Highlight the focused file after reroot without stealing focus.
         vim.schedule(function()
           pcall(api.tree.find_file, { buf = bufname, open = false, focus = false })
+        end)
+      end
+
+      -- Mirror jar_sources flow for jdtls' jdt:// URIs.
+      -- The buffer name stays jdt:// (so jdtls keeps serving navigation),
+      -- but we have an on-disk mirror under <cache>/jdt-sources/<library>/...
+      -- which is what nvim-tree actually renders and highlights.
+      local function maybe_switch_tree_to_jdt_source(bufname)
+        if type(bufname) ~= "string" or bufname == "" then
+          return
+        end
+
+        local lib_dir, mirror_path
+        if bufname:match "^jdt://" then
+          lib_dir = jdt_uri.library_dir_for_uri(bufname)
+          mirror_path = jdt_uri.cache_path_for_uri(bufname)
+        elseif jdt_uri.is_cache_path(bufname) then
+          lib_dir = jdt_uri.library_dir_for_path(bufname)
+          mirror_path = bufname
+        end
+
+        if not lib_dir then
+          return
+        end
+        lib_dir = vim.fn.fnamemodify(lib_dir, ":p")
+
+        if current_tree_root ~= lib_dir then
+          if
+            not is_dep_dir(current_tree_root)
+            and not jar_sources.is_cache_path(current_tree_root)
+            and not jdt_uri.is_cache_path(current_tree_root)
+          then
+            last_project_root = current_tree_root
+          end
+          set_tree_root(lib_dir)
+        end
+        ensure_tree_open()
+        vim.schedule(function()
+          if mirror_path and vim.fn.filereadable(mirror_path) == 1 then
+            pcall(api.tree.find_file, { buf = mirror_path, open = false, focus = false })
+          end
         end)
       end
 
@@ -334,6 +380,10 @@ return {
             local dep_label = go_dep_root_label(path)
             if dep_label then
               return dep_label
+            end
+            if jdt_uri.is_cache_path(path) then
+              local lib = vim.fn.fnamemodify(path, ":t")
+              return "☕ " .. lib .. " (jdtls)"
             end
             if jar_sources.is_cache_path(path) then
               return "☕ " .. vim.fn.fnamemodify(path, ":t")
@@ -473,6 +523,26 @@ return {
         end,
       }
 
+      -- Refresh tree when sibling package files finish populating from
+      -- src.zip / sources jar / vineflower (see configs.jdt-uri).
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "JdtPackagePopulated",
+        callback = function()
+          if api.tree.is_visible() and jdt_uri.is_cache_path(current_tree_root) then
+            pcall(api.tree.reload)
+            local bufname = vim.api.nvim_buf_get_name(0)
+            if bufname:match "^jdt://" then
+              local mirror = jdt_uri.cache_path_for_uri(bufname)
+              if mirror and vim.fn.filereadable(mirror) == 1 then
+                vim.schedule(function()
+                  pcall(api.tree.find_file, { buf = mirror, open = false, focus = false })
+                end)
+              end
+            end
+          end
+        end,
+      })
+
       -- Auto-switch nvim-tree root based on current buffer location
       vim.api.nvim_create_autocmd("BufEnter", {
         callback = function()
@@ -480,8 +550,12 @@ return {
           if bufname == "" then
             return
           end
-          -- Allow jar:// (buftype=nofile after BufReadCmd) and cached jar paths through
-          if vim.bo.buftype ~= "" and not (bufname:match "^jar://" or jar_sources.is_cache_path(bufname)) then
+          -- Allow jar:// / jdt:// (buftype=nofile after BufReadCmd) and cached paths through
+          local is_external = bufname:match "^jar://"
+            or bufname:match "^jdt://"
+            or jar_sources.is_cache_path(bufname)
+            or jdt_uri.is_cache_path(bufname)
+          if vim.bo.buftype ~= "" and not is_external then
             return
           end
 
@@ -496,11 +570,20 @@ return {
             return
           end
 
-          -- Returning to a normal file while tree is rooted in a jar cache:
+          -- Handle jdt:// and on-disk jdt mirror paths
+          if bufname:match "^jdt://" or jdt_uri.is_cache_path(bufname) then
+            maybe_switch_tree_to_jdt_source(bufname)
+            return
+          end
+
+          -- Returning to a normal file while tree is rooted in a jar/jdt cache:
           -- restore the previous project root (git root as fallback).
-          if jar_sources.is_cache_path(current_tree_root) then
+          if jar_sources.is_cache_path(current_tree_root) or jdt_uri.is_cache_path(current_tree_root) then
+            local function in_any_cache(p)
+              return jar_sources.is_cache_path(p) or jdt_uri.is_cache_path(p)
+            end
             local project_root = last_project_root
-            if not project_root or project_root == "" or jar_sources.is_cache_path(project_root) then
+            if not project_root or project_root == "" or in_any_cache(project_root) then
               project_root = get_git_root(vim.fn.fnamemodify(bufname, ":p:h"))
             end
             if project_root and current_tree_root ~= project_root then

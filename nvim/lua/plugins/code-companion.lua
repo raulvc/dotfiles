@@ -48,6 +48,34 @@ return {
           },
           chat = {
             adapter = "genplat",
+            tools = {
+              opts = {
+                auto_submit_errors = true,
+                auto_submit_success = true,
+                -- default_tools = {
+                --   "grep_search",
+                --   "file_search",
+                --   "read_file",
+                --   "insert_edit_into_file",
+                --   "cmd_runner",
+                -- },
+              },
+              ["grep_search"] = {
+                enabled = function()
+                  return vim.fn.executable "rg" == 1
+                end,
+              },
+              ["cmd_runner"] = {
+                opts = {
+                  require_approval_before = true,
+                },
+              },
+              ["insert_edit_into_file"] = {
+                opts = {
+                  require_approval_before = true,
+                },
+              },
+            },
             slash_commands = {
               ["buffer"] = {
                 callback = function(chat)
@@ -148,16 +176,6 @@ return {
                 },
               })
             end,
-
-            copilot = function()
-              return require("codecompanion.adapters").extend("copilot", {
-                schema = {
-                  model = {
-                    default = "claude-sonnet-4.5",
-                  },
-                },
-              })
-            end,
           },
         },
 
@@ -167,15 +185,11 @@ return {
             expiration_days = 30,
             max_entries = 50,
             opts = {
-              summary = {
-                generation_opts = {
-                  adapter = "copilot",
-                  model = "gpt-4o",
-                },
-              },
               title_generation_opts = {
-                adapter = "copilot",
-                model = "gpt-4o",
+                adapter = "genplat",
+                model = "gpt-5-nano",
+                refresh_every_n_prompts = 0,
+                max_refreshes = 3,
               },
             },
           },

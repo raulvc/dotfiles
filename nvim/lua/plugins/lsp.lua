@@ -59,6 +59,7 @@ return {
     lazy = false,
     config = function()
       require("configs.jar-sources").setup()
+      require("configs.jdt-uri").setup()
 
       -- Prevent LSP from ever attaching to diffview:// buffers
       local orig_buf_attach = vim.lsp.buf_attach_client
@@ -701,6 +702,24 @@ return {
           "--jvm-arg=-XX:+UseG1GC",
           "--jvm-arg=-XX:+UseStringDeduplication",
         },
+        init_options = {
+          -- Tell jdtls this client can resolve jdt:// URIs (decompiled external
+          -- classes) by sending java/classFileContents requests. Without this,
+          -- go-to-definition on JDK / library types silently fails.
+          extendedClientCapabilities = {
+            classFileContentsSupport = true,
+            advancedOrganizeImportsSupport = true,
+            advancedExtractRefactoringSupport = true,
+            advancedGenerateAccessorsSupport = true,
+            generateToStringPromptSupport = true,
+            hashCodeEqualsPromptSupport = true,
+            generateConstructorsPromptSupport = true,
+            generateDelegateMethodsPromptSupport = true,
+            moveRefactoringSupport = true,
+            overrideMethodsPromptSupport = true,
+            resolveAdditionalTextEditsSupport = true,
+          },
+        },
         settings = {
           java = {
             format = {
@@ -742,7 +761,7 @@ return {
               validateAllOpenBuffersOnChanges = false,
             },
             references = {
-              includeDecompiledSources = false,
+              includeDecompiledSources = true,
             },
             implementationsCodeLens = { enabled = false },
             referencesCodeLens = { enabled = false },
@@ -973,32 +992,13 @@ return {
       -- Default list of enabled providers defined so that you can extend it
       -- elsewhere in your config, without redefining it, due to `opts_extend`
       sources = {
-        default = { "lazydev", "lsp", "go_deep", "path", "snippets", "buffer", "minuet", "emoji", "sql" },
+        default = { "lazydev", "lsp", "go_deep", "path", "snippets", "buffer", "emoji", "sql" },
         providers = {
           lazydev = {
             name = "LazyDev",
             module = "lazydev.integrations.blink",
             -- make lazydev completions top priority (see `:h blink.cmp`)
             score_offset = 100,
-          },
-          minuet = {
-            name = "minuet",
-            module = "minuet.blink",
-            score_offset = -100,
-            async = true,
-            timeout_ms = 3000,
-            should_show_items = function()
-              local ft = vim.bo.filetype
-              return not vim.tbl_contains({
-                "codecompanion",
-                "codecompanion-chat",
-                "codecompanion-inline",
-                "codecompanion_actions",
-                "codecompanion_chat",
-                "codecompanion_inline",
-                "CodeCompanion",
-              }, ft)
-            end,
           },
           emoji = {
             module = "blink-emoji",
@@ -1054,53 +1054,6 @@ return {
     },
     opts_extend = { "sources.default" },
     lazy = false,
-  },
-
-  {
-    "milanglacier/minuet-ai.nvim",
-    lazy = false,
-    config = function()
-      require("minuet").setup {
-        provider = "openai_compatible",
-        n_completions = 1,
-        context_window = 2048,
-        throttle = 400,
-        debounce = 200,
-        request_timeout = 4,
-        virtualtext = {
-          auto_trigger_ft = { "*" },
-          keymap = {
-            accept = "<C-l>",
-            accept_line = "<A-a>",
-            prev = "<A-[>",
-            next = "<A-]>",
-            dismiss = "<A-e>",
-          },
-        },
-        provider_options = {
-          openai_compatible = {
-            api_key = "REQUESTER_TOKEN",
-            end_point = (vim.env.GENPLAT_URL or "") .. "/v1/chat/completions",
-            model = "gpt-4.1-nano",
-            name = "GenPlat",
-            stream = true,
-            optional = {
-              max_tokens = 128,
-              -- no reasoning_effort — this isn't a reasoning model
-            },
-          },
-        },
-      }
-
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = { "codecompanion-chat", "codecompanion_chat" },
-        callback = function(args)
-          pcall(function()
-            require("minuet").toggle_auto_trigger(args.buf, false)
-          end)
-        end,
-      })
-    end,
   },
 
   {

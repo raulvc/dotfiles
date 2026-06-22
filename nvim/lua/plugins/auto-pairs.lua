@@ -1,9 +1,12 @@
 return {
   {
     "saghen/blink.pairs",
+    dependencies = "saghen/blink.lib",
     lazy = false,
     version = "*",
-    dependencies = { "saghen/blink.download" },
+    build = function()
+      require("blink.pairs").build():pwait(60000)
+    end,
     opts = {
       highlights = {
         matchparen = {
