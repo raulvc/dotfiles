@@ -21,4 +21,4 @@ nvim/breakpoints.json
 !git/*
 !mitmproxy/config.yaml
 !mitmproxy/*.py
-
+!lazygit

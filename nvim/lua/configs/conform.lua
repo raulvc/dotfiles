@@ -31,7 +31,7 @@ local options = {
       args = { "--indent", "2" },
     },
     yamlfmt = {
-      args = { "-formatter", "indent=2", "-formatter", "retain_line_breaks_single=true", "-" },
+      args = { "-formatter", "indent=2", "-formatter", "retain_line_breaks_single=true", "-formatter", "trim_trailing_whitespace=true", "-" },
       stdin = true,
     },
     black = {
@@ -42,6 +42,10 @@ local options = {
         "py39",
         "--preview",
       },
+    },
+    docformatter = {
+      args = { "-" },
+      stdin = true,
     },
     isort = {
       prepend_args = {
@@ -98,43 +102,19 @@ local options = {
     },
   },
 
-  format_on_save = function(bufnr)
-    -- Re-entry guard: if already formatting this buffer, skip
-    if _formatting_guard[bufnr] then
-      return nil
-    end
-
-    -- JVM-based formatters (ktlint, google-java-format, npm-groovy-lint) have
-    -- multi-second startup and block the UI when run synchronously on save.
-    -- They are handled by format_after_save below.
-    local async_filetypes = { kotlin = true, java = true, groovy = true }
-    if async_filetypes[vim.bo[bufnr].filetype] then
-      return nil
-    end
-
-    _formatting_guard[bufnr] = true
-    vim.defer_fn(function()
-      _formatting_guard[bufnr] = nil
-    end, 5000)
-
-    return {
-      timeout_ms = 2000,
-      lsp_format = "never",
-    }
-  end,
+  -- All formatting is async via format_after_save (BufWritePost):
+  -- the file writes first, then conform formats in the background and
+  -- re-writes if anything changed. This keeps the UI non-blocking.
+  format_on_save = false,
 
   format_after_save = function(bufnr)
-    local async_filetypes = { kotlin = true, java = true, groovy = true }
-    if not async_filetypes[vim.bo[bufnr].filetype] then
-      return nil
-    end
     if _formatting_guard[bufnr] then
       return nil
     end
     _formatting_guard[bufnr] = true
     vim.defer_fn(function()
       _formatting_guard[bufnr] = nil
-    end, 30000)
+    end, 10000)
     return {
       lsp_format = "never",
     }

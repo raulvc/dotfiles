@@ -1,0 +1,84 @@
+# Lazygit config themed to match Kanagawa wave
+
+gui:
+  nerdFontsVersion: "3"
+  showFileTree: true
+  showRandomTip: false
+  showBottomLine: true
+  showCommandLog: true
+  commandLogSize: 6
+  showListFooter: true
+  showPanelJumps: true
+  sidePanelWidth: 0.3
+  expandFocusedSidePanel: false
+  enlargedSideViewLocation: left
+  screenMode: normal
+  border: rounded
+  animateExplosion: true
+  scrollHeight: 3
+  scrollOffMargin: 2
+  showDivergenceFromBaseBranch: onlyArrow
+  showBranchCommitHash: false
+  commitHashLength: 8
+  filterMode: fuzzy
+  splitDiff: auto
+  mainPanelSplitMode: flexible
+  spinner:
+    frames: ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
+    rate: 80
+  # Kanagawa wave palette
+  theme:
+    activeBorderColor:
+      - "#7E9CD8" # crystalBlue
+      - bold
+    inactiveBorderColor:
+      - "#54546D" # sumiInk6
+    searchingActiveBorderColor:
+      - "#FFA066" # surimiOrange
+    optionsTextColor:
+      - "#7E9CD8" # crystalBlue
+    selectedLineBgColor:
+      - "#2A2A37" # sumiInk4 (bg_p1)
+    inactiveViewSelectedLineBgColor:
+      - "#363646" # sumiInk5 (bg_p2)
+    cherryPickedCommitFgColor:
+      - "#957FB8" # oniViolet
+    cherryPickedCommitBgColor:
+      - "#1a1a22" # sumiInk2 (bg_m1)
+    markedBaseCommitFgColor:
+      - "#7E9CD8" # crystalBlue
+    markedBaseCommitBgColor:
+      - "#E6C384" # carpYellow
+    unstagedChangesColor:
+      - "#C34043" # autumnRed
+    defaultFgColor:
+      - "#DCD7BA" # fujiWhite
+  authorColors:
+    "*": "#957FB8" # oniViolet
+  branchColorPatterns:
+    "^feat/": "#76946A" # autumnGreen
+    "^fix/": "#C34043" # autumnRed
+    "^docs/": "#7E9CD8" # crystalBlue
+    "^chore/": "#DCA561" # autumnYellow
+    "^refactor/": "#957FB8" # oniViolet
+git:
+  log:
+    showGraph: always
+    order: topo-order
+  parseEmoji: true
+  pagers:
+    - colorArg: always
+      pager: delta --paging=never
+confirmOnQuit: true
+quitOnTopLevelReturn: false
+disableStartupPopups: true
+notARepository: prompt
+promptToReturnFromSubprocess: true
+
+keybinding:
+  universal:
+    quit: 'Q'
+    return: ['<esc>', 'q']
+    prevPage: ['<pgup>']
+    nextPage: ['<pgdown>']
+    goInto: ['<enter>', '<ctrl+enter>']
