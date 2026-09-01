@@ -2,4 +2,6 @@ console_palette: "solarized_dark"
 
 scripts:
   - ~/.mitmproxy/flow_highlight.py
+  - ~/.mitmproxy/ifood_headers.py
+  - ~/.mitmproxy/xh_export.py
 

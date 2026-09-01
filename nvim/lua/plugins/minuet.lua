@@ -21,6 +21,12 @@ return {
         throttle = 400,
         debounce = 200,
         request_timeout = 4,
+        -- Never trigger in codecompanion chat buffers (filetype "codecompanion").
+        enable_predicates = {
+          function()
+            return vim.bo.filetype ~= "codecompanion"
+          end,
+        },
         virtualtext = {
           -- No filetypes auto-trigger by default; <leader>cm toggles per-buffer.
           auto_trigger_ft = {},
