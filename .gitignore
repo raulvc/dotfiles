@@ -22,3 +22,5 @@ nvim/breakpoints.json
 !mitmproxy/config.yaml
 !mitmproxy/*.py
 !lazygit
+!sofka
+!sofka/config.toml

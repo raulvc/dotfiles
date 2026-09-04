@@ -11,8 +11,8 @@ return {
 
       -- Configure linters by filetype
       lint.linters_by_ft = {
-        javascript = { "eslint_d" },
-        typescript = { "eslint_d" },
+        javascript = { "oxlint" },
+        typescript = { "oxlint" },
         python = { "flake8" },
         lua = { "luacheck" },
         go = { "golangcilint" },
@@ -21,7 +21,7 @@ return {
       }
 
       require("mason-nvim-lint").setup {
-        ensure_installed = { "flake8", "luacheck", "eslint_d", "golangcilint" },
+        ensure_installed = { "flake8", "luacheck", "oxlint", "golangcilint" },
         automatic_installation = true,
       }
 

@@ -150,13 +150,10 @@ return {
                 },
                 schema = {
                   model = {
-                    default = "glm-5.2-tencent",
+                    default = "glm-5.3-flash-tencent",
                     choices = {
-                      "glm-5.2-tencent",
-                      "glm-5.1",
-                      "glm-5-maas",
-                      "claude-opus-4-6-bedrock",
-                      "claude-opus-4-6-vertexai",
+                      "glm-5.3-flash-tencent",
+                      "glm-5.3-tencent",
                     },
                   },
                   temperature = {

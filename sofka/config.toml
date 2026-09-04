@@ -1,0 +1,42 @@
+# sofka config — https://github.com/nklmilojevic/sofka
+# Reference: docs/configuration.md and docs/views.md in the sofka repo.
+# `:reload` in the TUI re-reads this file live; `:config` shows sources/warnings.
+
+# KIND column (canary vs stable), overlaid onto the built-in views: new
+# columns always land just before AGE, and the computed columns (READY n/m,
+# RESTARTS, rich STATUS) are kept intact.
+#
+# Why not leftmost: putting a column first requires `replace = true`, which
+# rebuilds the entire column list from JSON Pointers — and READY (n/m) and
+# RESTARTS (sum across containers) are computed by sofka and can't be
+# expressed as pointers. Leftmost KIND and computed columns are mutually
+# exclusive in sofka v0.21; changing that needs an upstream patch.
+[views."v1/pods"]
+
+[[views."v1/pods".columns]]
+name = "KIND"
+path = "/metadata/labels/kind"
+
+[views."apps/v1/deployments"]
+
+[[views."apps/v1/deployments".columns]]
+name = "KIND"
+path = "/metadata/labels/kind"
+
+# If the value lives somewhere else, adjust the JSON Pointer, e.g.:
+#   annotation:            /metadata/annotations/kind
+#   fully-qualified label: /metadata/labels/example.com~1kind   ("/" → "~1")
+
+# Optional: group canaries together by default (canary sorts before stable).
+# [views."v1/pods"]
+# sort = "KIND"
+
+# Handy filters while in the view:
+#   / -l kind=canary    server-side label selector — only canary pods
+#   / -l kind!=canary   everything except canaries
+#   / kind=canary       local filter on the KIND column's value
+#
+# Note: coloring rows by kind is not configurable today — sofka tints whole
+# rows from the STATUS column's value via a fixed status→color mapping
+# (src/theme.rs `row_color`), and unknown values like "canary" fall back to
+# the default blue. An upstream change is required for that.
