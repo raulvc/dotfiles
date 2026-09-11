@@ -1,0 +1,95 @@
+# Crush bash config. Secrets come from the environment, never this file;
+# MCP headers resolve to dropped headers when the variable is unset.
+# providers + tools tuning stay in crush.json (no crushrc equivalent in 0.93.x).
+
+mcp add context7 \
+  --type http \
+  --url "https://mcp.context7.com/mcp" \
+  --header CONTEXT7_API_KEY "$CONTEXT7_API_KEY"
+
+mcp add semble \
+  --command uvx \
+  --args "--from" \
+  --args "semble[mcp]" \
+  --args "semble"
+
+mcp add lightpanda \
+  --command lightpanda \
+  --args "mcp"
+
+lsp add go \
+  --command "$HOME/.local/share/nvim/mason/bin/gopls" \
+  --filetypes go --filetypes mod \
+  --options '{"gofumpt":true,"codelenses":{"gc_details":true,"generate":true,"test":true,"tidy":true},"hints":{"assignVariableTypes":true,"compositeLiteralFields":true,"constantValues":true},"analyses":{"nilness":true,"unusedparams":true,"unusedwrite":true},"staticcheck":true,"directoryFilters":["-.git","-node_modules"]}'
+
+lsp add typescript \
+  --command typescript-language-server \
+  --args "--stdio" \
+  --filetypes ts --filetypes tsx --filetypes js --filetypes jsx \
+  --root-markers package.json --root-markers tsconfig.json --root-markers jsconfig.json
+
+lsp add java \
+  --command "$HOME/.local/share/nvim/mason/packages/jdtls/bin/jdtls" \
+  --filetypes java \
+  --root-markers pom.xml --root-markers build.gradle --root-markers build.gradle.kts --root-markers settings.gradle --root-markers settings.gradle.kts
+
+lsp add kotlin \
+  --command "$HOME/.local/share/nvim/mason/packages/kotlin-lsp/kotlin-lsp.sh" \
+  --filetypes kt --filetypes kts \
+  --root-markers build.gradle.kts --root-markers settings.gradle.kts --root-markers build.gradle --root-markers settings.gradle
+
+model large genplat/glm-5.3-flash-tencent --max-tokens 128000
+model small genplat/deepseek-v4-flash-official --max-tokens 8192
+
+permissions allow \
+  view ls grep glob fetch agentic_fetch agent sourcegraph \
+  crush_info crush_logs job_output list_mcp_resources read_mcp_resource \
+  lsp_definition lsp_references lsp_call_hierarchy lsp_diagnostics lsp_symbols \
+  mcp_context7_query-docs mcp_context7_resolve-library-id \
+  mcp_semble_search mcp_semble_find_related \
+  mcp_lightpanda_goto mcp_lightpanda_search mcp_lightpanda_markdown \
+  mcp_lightpanda_html mcp_lightpanda_screenshot mcp_lightpanda_links \
+  mcp_lightpanda_evaluate mcp_lightpanda_extract mcp_lightpanda_tree \
+  mcp_lightpanda_nodeDetails mcp_lightpanda_interactiveElements \
+  mcp_lightpanda_structuredData mcp_lightpanda_detectForms \
+  mcp_lightpanda_click mcp_lightpanda_fill mcp_lightpanda_scroll \
+  mcp_lightpanda_waitForSelector mcp_lightpanda_waitForScript \
+  mcp_lightpanda_waitForState mcp_lightpanda_hover mcp_lightpanda_press \
+  mcp_lightpanda_selectOption mcp_lightpanda_setChecked \
+  mcp_lightpanda_findElement mcp_lightpanda_consoleLogs \
+  mcp_lightpanda_getUrl mcp_lightpanda_getCookies mcp_lightpanda_getEnv \
+  mcp_lightpanda_save mcp_lightpanda_session_new mcp_lightpanda_session_list \
+  mcp_lightpanda_session_close
+
+option debug false
+option auto-lsp false
+option ui diff split
+option ui compact false
+option ui scrollbar always
+
+for skill in \
+  benchmark crush-config crush-hooks databricks-context-discovery \
+  ifood-backend-libraries ifood-slides brainstorming bruce calendar-bot \
+  context-sharing create-ifood-pago-presentation create-ifood-presentation \
+  dab-migration dab-test-assistant data-quality-rules-creator \
+  databricks-cost-optimization databricks-query databricks-query-tagging \
+  dbt-table-documentation directus dqx-rule-assistant \
+  exploration-cluster-creator genplat gitlab gloria-eventos-corporativos \
+  ifds ifood-bench ifood-brand-style irc-mtdt jira k8s-debug k8s-deploy \
+  ketchup mensageria-budget ml-maturity-assessor datachef-dab-migration \
+  yaml-medallion-to-dlt-migration ml-maturity-assessment \
+  playwright-calendar-detail post-mortem prato-feito prisma raio-x \
+  regulatory-documentation remove-background script-data-lineage-csv \
+  sentry skill-creator sonar-setup start-debug-chrome tech-economics tests \
+  the-silence thoughtspot-api tompero-cli toqan-marketing-agent tramontina \
+  zoop-table-documentation ifood-deploy-setup \
+  ifood-golden-nextjs-dockerfile create-k6-api-test-from-shark
+do
+  option disable-skill "$skill"
+done
+
+hook add PreToolUse \
+  --name rtk-rewrite \
+  --matcher '^bash$' \
+  --command "$HOME/.config/crush/hooks/rtk-rewrite.sh" \
+  --timeout 10

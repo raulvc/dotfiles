@@ -24,3 +24,5 @@ nvim/breakpoints.json
 !lazygit
 !sofka
 !sofka/config.toml
+!crush
+!crush/crushrc
