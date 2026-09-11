@@ -27,6 +27,15 @@ path = "/metadata/labels/kind"
 #   annotation:            /metadata/annotations/kind
 #   fully-qualified label: /metadata/labels/example.com~1kind   ("/" → "~1")
 
+# View history on Ctrl+Left (back) / Ctrl+Right (forward). Requires sofka
+# >= 0.25 (older versions ignore this section). Setting an action replaces
+# its default bindings — keep "[" / "]" in a list if you want both:
+#   history_back    = ["[", "ctrl-left"]
+#   history_forward = ["]", "ctrl-right"]
+[keys.table]
+history_back = "ctrl-left"
+history_forward = "ctrl-right"
+
 # Optional: group canaries together by default (canary sorts before stable).
 # [views."v1/pods"]
 # sort = "KIND"
