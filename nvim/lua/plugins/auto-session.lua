@@ -25,7 +25,7 @@ return {
         session_lens = {
           load_on_setup = false, -- Don't auto-load on setup to avoid conflicts
         },
-        suppressed_dirs = nil,
+        suppressed_dirs = { "~", vim.fn.expand "~" },
 
         pre_save_cmds = {
           -- Close minimap first to prevent handle errors

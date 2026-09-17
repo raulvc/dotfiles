@@ -66,6 +66,7 @@ option auto-lsp false
 option ui diff split
 option ui compact false
 option ui scrollbar always
+option request-timeout 0
 
 for skill in \
   benchmark crush-config crush-hooks databricks-context-discovery \

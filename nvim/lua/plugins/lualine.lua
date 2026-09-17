@@ -56,7 +56,7 @@ return {
           lualine_a = { "mode" },
           lualine_b = { "branch", "diff", "diagnostics" },
           lualine_c = { "filename" },
-          lualine_x = { visual_selection, "encoding", "fileformat", "filetype" },
+          lualine_x = { visual_selection, "%S", "encoding", "fileformat", "filetype" },
           lualine_y = { "progress" },
           lualine_z = { "location" },
         },
